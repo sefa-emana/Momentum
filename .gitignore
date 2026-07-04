@@ -29,3 +29,4 @@ npm-debug.log*
 
 # Claude Code session files (agent worktrees etc.)
 .claude/
+*.tsbuildinfo
