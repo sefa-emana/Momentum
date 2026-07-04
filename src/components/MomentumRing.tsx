@@ -1,4 +1,5 @@
 import { TIER_META, momentumTier, type MomentumTier } from '../domain'
+import { Ticker } from '../ui/Ticker'
 
 /** Tier → design-token colour for the label pill (domain tier code is untouched). */
 const TIER_TOKEN: Record<MomentumTier, string> = {
@@ -76,7 +77,7 @@ export function MomentumRing({
       >
         <div className="metric-label">Momentum</div>
         <div className="hero-number" style={{ fontSize: 54, margin: '2px 0 4px' }}>
-          {Math.round(momentum)}
+          <Ticker value={Math.round(momentum)} />
         </div>
         <div
           className="pill"

@@ -197,9 +197,9 @@ per Zustand-in-URL/QR-Code. Kein Bestandteil der aktuellen Wellen.
 
 | Welle | Inhalt | Status |
 |---|---|---|
-| **1a** | Domain: Progression Engine + Vergebungs-Layer + adaptive Ziele + WHO-Punkte (reine Logik + Tests) | in Arbeit |
-| **1b** | Design-Foundation: Token-System (Dark/Light + Glass), Lucide-Icons, Typo, Tab-Bar-Pille | in Arbeit |
-| **2** | UI-Features: Bento-Dashboard, Log-Sheet mit RPE-Tap/PR, Heatmap, Reward-Upgrade, Ticker | offen |
+| **1a** | Domain: Progression Engine + Vergebungs-Layer + adaptive Ziele + WHO-Punkte (reine Logik + Tests) | ✅ fertig |
+| **1b** | Design-Foundation: Token-System (Dark/Light + Glass), Lucide-Icons, Typo, Tab-Bar-Pille | ✅ fertig |
+| **2** | UI-Features: Dashboard-Karten (Woche/Fortschritt/Nudges), Log-Sheet mit RPE-Tap/PR/Stimmung, Heatmap, Reward-Upgrade, Ticker, Pause-UI | ✅ fertig |
 | **3** | Endgame: Mastery-Tracks, Quests, Saisons, Achievements-Ausbau | offen |
 | **4** | Plattform: IndexedDB-Migration, Badging, Share-Cards, Shortcuts, Perf | offen |
 

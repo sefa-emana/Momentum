@@ -147,6 +147,40 @@ test.describe('Profile', () => {
   })
 })
 
+test.describe('Wave 2 — mechanics in the UI', () => {
+  test('renders the consistency heatmap in history', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await expect(page.getByRole('heading', { name: 'Verlauf' })).toBeVisible()
+    await expect(page.getByTestId('heatmap')).toBeVisible()
+  })
+
+  test('"Mehr (optional)" reveals a selectable feel chip', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    await expect(page.getByRole('dialog', { name: 'Training loggen' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Mehr (optional)' }).click()
+    const solide = page.getByRole('button', { name: 'Solide' })
+    await expect(solide).toBeVisible()
+    await solide.click()
+    await expect(solide).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('starting and ending a "Life happened" pause round-trips', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Profil' }).click()
+
+    await page.getByRole('button', { name: 'Pause starten' }).click()
+    await expect(page.getByRole('button', { name: 'Pause beenden' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Pause beenden' }).click()
+    await expect(page.getByRole('button', { name: 'Pause starten' })).toBeVisible()
+  })
+})
+
 test('has PWA manifest and service worker registration', async ({ page }) => {
   await page.goto(APP_URL)
   const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href')

@@ -27,6 +27,31 @@ export function useNow(intervalMs = 60_000): string {
   return now
 }
 
+/**
+ * True when motion should be suppressed — either the user's in-app
+ * "Animationen reduzieren" setting or the OS `prefers-reduced-motion`. Used by
+ * the Ticker, confetti and other motion primitives to fall back to an instant,
+ * static render.
+ */
+export function useReducedMotion(): boolean {
+  const setting = useStore((s) => s.settings.reducedMotion)
+  const [osReduced, setOsReduced] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false,
+  )
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const onChange = () => setOsReduced(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  return setting || osReduced
+}
+
 /** Derived view-model recomputed whenever the store or the clock changes. */
 export function useDerived(): DerivedState {
   const now = useNow()

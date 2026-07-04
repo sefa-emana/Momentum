@@ -1,5 +1,17 @@
 import { useRef, useState } from 'react'
-import { Clock, Download, Flame, Monitor, Moon, Sun, Upload } from 'lucide-react'
+import {
+  CalendarDays,
+  Clock,
+  Download,
+  Flame,
+  Monitor,
+  Moon,
+  Play,
+  Snowflake,
+  Sparkles,
+  Sun,
+  Upload,
+} from 'lucide-react'
 import { useStore } from '../state/store'
 import { useDerived } from '../ui/hooks'
 import {
@@ -9,6 +21,8 @@ import {
 } from '../domain'
 import { ICON_STROKE } from '../ui/icons'
 import { getTheme, setTheme, type ThemePref } from '../ui/theme'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
 
 const THEME_OPTIONS: { id: ThemePref; label: string; Icon: typeof Monitor }[] = [
   { id: 'auto', label: 'Auto', Icon: Monitor },
@@ -23,7 +37,13 @@ export function Profile() {
   const setReducedMotion = useStore((s) => s.setReducedMotion)
   const resetAll = useStore((s) => s.resetAll)
   const importState = useStore((s) => s.importState)
+  const startPause = useStore((s) => s.startPause)
+  const endPause = useStore((s) => s.endPause)
+  const pauses = useStore((s) => s.pauses)
   const d = useDerived()
+
+  const activePause = pauses.find((p) => p.to === null)
+  const showSuggestion = d.goalSuggestion.reason !== 'keep'
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState('')
@@ -96,6 +116,14 @@ export function Profile() {
           </div>
         </div>
 
+        <div className="stat">
+          <div className="stat-value">
+            <CalendarDays size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--text-dim)' }} aria-hidden />
+            <span className="tnum">{d.avgSessionsPerWeek.toLocaleString('de-DE')}</span>
+          </div>
+          <div className="stat-label">Ø Einheiten/Woche (4 W)</div>
+        </div>
+
         <div className="card stack" style={{ gap: 14 }}>
           <div>
             <label className="field-label" htmlFor="p-name">Name</label>
@@ -120,6 +148,30 @@ export function Profile() {
               onChange={(e) => setWeeklyGoal(Number(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--accent)' }}
             />
+            {showSuggestion && (
+              <div
+                className="row-between"
+                style={{
+                  gap: 10,
+                  marginTop: 10,
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'color-mix(in srgb, var(--state-rest) 12%, transparent)',
+                }}
+              >
+                <span className="row" style={{ gap: 8, fontSize: 13, flex: 1 }}>
+                  <Sparkles size={16} strokeWidth={ICON_STROKE} style={{ color: 'var(--state-rest)', flex: 'none' }} aria-hidden />
+                  Vorschlag: {d.goalSuggestion.suggestion} — basierend auf deinen letzten 4 Wochen
+                </span>
+                <button
+                  className="chip"
+                  onClick={() => setWeeklyGoal(d.goalSuggestion.suggestion)}
+                  data-active
+                >
+                  Übernehmen
+                </button>
+              </div>
+            )}
           </div>
 
           <div>
@@ -149,6 +201,33 @@ export function Profile() {
               style={{ width: 20, height: 20, accentColor: 'var(--accent)' }}
             />
           </label>
+        </div>
+
+        <div className="card stack" style={{ gap: 12 }}>
+          <strong className="row" style={{ gap: 8 }}>
+            <Snowflake size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--state-rest)' }} aria-hidden />
+            Life happened
+          </strong>
+          <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+            Krankheit oder Reise? Starte eine Pause — Momentum und Streak frieren
+            ein, ganz ohne Schuldgefühl.
+          </p>
+          {activePause ? (
+            <>
+              <div className="faint" style={{ fontSize: 12.5 }}>
+                Pausiert seit {format(new Date(activePause.from), 'd. MMMM', { locale: de })}
+              </div>
+              <button className="btn btn-block" onClick={endPause}>
+                <Play size={18} strokeWidth={ICON_STROKE} aria-hidden />
+                Pause beenden
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-block" onClick={startPause}>
+              <Snowflake size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              Pause starten
+            </button>
+          )}
         </div>
 
         <div className="card stack" style={{ gap: 12 }}>

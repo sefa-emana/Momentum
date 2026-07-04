@@ -16,7 +16,9 @@ export default function App() {
   const onboarded = useStore((s) => s.onboarded)
   const [tab, setTab] = useState<Tab>('home')
   const [logOpen, setLogOpen] = useState(false)
-  const [reward, setReward] = useState<WorkoutReward | null>(null)
+  const [reward, setReward] = useState<
+    { reward: WorkoutReward; moodAfter?: 1 | 2 | 3 | 4 | 5 } | null
+  >(null)
 
   if (!onboarded) {
     return (
@@ -48,9 +50,9 @@ export default function App() {
           <LogWorkoutSheet
             key="log-sheet"
             onClose={() => setLogOpen(false)}
-            onLogged={(r) => {
+            onLogged={(r, moodAfter) => {
               setLogOpen(false)
-              setReward(r)
+              setReward({ reward: r, moodAfter })
             }}
           />
         )}
@@ -58,7 +60,12 @@ export default function App() {
 
       <AnimatePresence>
         {reward && (
-          <RewardOverlay key="reward" reward={reward} onClose={() => setReward(null)} />
+          <RewardOverlay
+            key="reward"
+            reward={reward.reward}
+            moodAfter={reward.moodAfter}
+            onClose={() => setReward(null)}
+          />
         )}
       </AnimatePresence>
     </div>
