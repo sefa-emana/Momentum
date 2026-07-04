@@ -26,3 +26,6 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Claude Code session files (agent worktrees etc.)
+.claude/
