@@ -36,7 +36,7 @@ test.describe('Logging workouts', () => {
 
     // Dashboard now reflects one workout.
     await expect(page.getByText('Einheiten gesamt')).toBeVisible()
-    await expect(page.getByText('💪 1')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('1')
   })
 
   test('accumulates total XP after a session', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Logging workouts', () => {
 
     // Back on the dashboard the count is reset to zero.
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByText('💪 0')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('0')
   })
 })
 
@@ -89,7 +89,7 @@ test.describe('Momentum & streak', () => {
   test('streak shows 1 after the first workout', async ({ page }) => {
     await onboard(page)
     await logWorkout(page)
-    await expect(page.getByText('🔥 1')).toBeVisible()
+    await expect(page.getByTestId('stat-streak')).toContainText('1')
   })
 })
 
@@ -109,7 +109,7 @@ test.describe('Persistence', () => {
 
     await page.reload()
 
-    await expect(page.getByText('💪 2')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
   })
 })
 

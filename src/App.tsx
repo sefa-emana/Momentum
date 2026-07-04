@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { Plus } from 'lucide-react'
 import { useStore } from './state/store'
 import { Onboarding } from './components/Onboarding'
 import { Dashboard } from './components/Dashboard'
@@ -37,7 +38,7 @@ export default function App() {
         aria-label="Training loggen"
         onClick={() => setLogOpen(true)}
       >
-        +
+        <Plus size={28} strokeWidth={2} aria-hidden />
       </button>
 
       <BottomNav tab={tab} onChange={setTab} />

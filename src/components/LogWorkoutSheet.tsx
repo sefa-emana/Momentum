@@ -10,6 +10,7 @@ import {
   type Intensity,
   type WorkoutType,
 } from '../domain'
+import { WORKOUT_TYPE_ICON, INTENSITY_ICON, ICON_STROKE } from '../ui/icons'
 
 const TYPES: WorkoutType[] = ['strength', 'cardio', 'mobility', 'sport', 'other']
 const INTENSITIES: Intensity[] = ['light', 'moderate', 'vigorous']
@@ -74,41 +75,47 @@ export function LogWorkoutSheet({
         <div className="sheet-handle" />
         <h2 style={{ fontSize: 22, marginBottom: 4 }}>Training loggen</h2>
         <p className="muted" style={{ fontSize: 14, marginBottom: 18 }}>
-          Auch 5 Minuten zählen. Zeig dich. 💪
+          Auch 5 Minuten zählen. Zeig dich.
         </p>
 
         <div className="stack" style={{ gap: 18 }}>
           <div>
             <span className="field-label">Art</span>
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {TYPES.map((t) => (
-                <button
-                  key={t}
-                  className="chip"
-                  data-active={type === t}
-                  onClick={() => setType(t)}
-                >
-                  <span aria-hidden>{WORKOUT_TYPE_META[t].icon}</span>
-                  {WORKOUT_TYPE_META[t].label}
-                </button>
-              ))}
+              {TYPES.map((t) => {
+                const Icon = WORKOUT_TYPE_ICON[t]
+                return (
+                  <button
+                    key={t}
+                    className="chip"
+                    data-active={type === t}
+                    onClick={() => setType(t)}
+                  >
+                    <Icon size={16} strokeWidth={ICON_STROKE} aria-hidden />
+                    {WORKOUT_TYPE_META[t].label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           <div>
             <span className="field-label">Intensität</span>
             <div className="row" style={{ gap: 8 }}>
-              {INTENSITIES.map((i) => (
-                <button
-                  key={i}
-                  className="chip"
-                  data-active={intensity === i}
-                  onClick={() => setIntensity(i)}
-                >
-                  <span aria-hidden>{INTENSITY_META[i].icon}</span>
-                  {INTENSITY_META[i].label}
-                </button>
-              ))}
+              {INTENSITIES.map((i) => {
+                const { Icon, color } = INTENSITY_ICON[i]
+                return (
+                  <button
+                    key={i}
+                    className="chip"
+                    data-active={intensity === i}
+                    onClick={() => setIntensity(i)}
+                  >
+                    <Icon size={16} strokeWidth={ICON_STROKE} style={{ color }} aria-hidden />
+                    {INTENSITY_META[i].label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -150,9 +157,9 @@ export function LogWorkoutSheet({
             />
           </div>
 
-          <div className="row-between card" style={{ padding: 14, background: 'var(--bg-card-2)' }}>
+          <div className="row-between card" style={{ padding: 14, background: 'var(--surface-2)' }}>
             <span className="muted">Belohnung</span>
-            <strong style={{ fontSize: 18, color: 'var(--xp)' }}>
+            <strong className="tnum" style={{ fontSize: 18, color: 'var(--xp)' }}>
               +{previewXp} XP
             </strong>
           </div>

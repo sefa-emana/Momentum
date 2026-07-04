@@ -1,5 +1,7 @@
+import { Inbox, Trash2 } from 'lucide-react'
 import { useStore } from '../state/store'
-import { INTENSITY_META, WORKOUT_TYPE_META, type Workout } from '../domain'
+import { WORKOUT_TYPE_META, type Workout } from '../domain'
+import { WORKOUT_TYPE_ICON, INTENSITY_ICON, ICON_STROKE } from '../ui/icons'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -20,7 +22,7 @@ export function History() {
 
       {sorted.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 30 }}>
-          <div style={{ fontSize: 40 }}>📭</div>
+          <Inbox size={40} strokeWidth={1.5} style={{ color: 'var(--text-faint)' }} aria-hidden />
           <p className="muted">Noch keine Einheiten. Tippe auf +, um loszulegen.</p>
         </div>
       ) : (
@@ -30,40 +32,46 @@ export function History() {
               <div className="faint" style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {formatDayHeader(day)}
               </div>
-              {items.map((w) => (
-                <div key={w.id} className="list-item">
-                  <span style={{ fontSize: 26 }} aria-hidden>
-                    {WORKOUT_TYPE_META[w.type].icon}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="row" style={{ gap: 8 }}>
-                      <strong>{WORKOUT_TYPE_META[w.type].label}</strong>
-                      <span className="faint" style={{ fontSize: 12 }}>
-                        {INTENSITY_META[w.intensity].icon} {w.durationMin}′
-                      </span>
-                    </div>
-                    {w.note && (
-                      <div className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {w.note}
+              {items.map((w) => {
+                const TypeIcon = WORKOUT_TYPE_ICON[w.type]
+                const intensity = INTENSITY_ICON[w.intensity]
+                const IntensityIcon = intensity.Icon
+                return (
+                  <div key={w.id} className="list-item">
+                    <span className="badge-icon" aria-hidden>
+                      <TypeIcon size={22} strokeWidth={ICON_STROKE} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="row" style={{ gap: 8 }}>
+                        <strong>{WORKOUT_TYPE_META[w.type].label}</strong>
+                        <span className="faint row" style={{ fontSize: 12, gap: 4 }}>
+                          <IntensityIcon size={13} strokeWidth={ICON_STROKE} style={{ color: intensity.color }} aria-hidden />
+                          {w.durationMin}′
+                        </span>
                       </div>
-                    )}
-                    <div className="faint" style={{ fontSize: 11.5 }}>
-                      {format(new Date(w.date), 'HH:mm', { locale: de })} Uhr
+                      {w.note && (
+                        <div className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {w.note}
+                        </div>
+                      )}
+                      <div className="faint" style={{ fontSize: 11.5 }}>
+                        {format(new Date(w.date), 'HH:mm', { locale: de })} Uhr
+                      </div>
                     </div>
+                    <span className="pill" style={{ color: 'var(--xp)' }}>+{w.xpEarned}</span>
+                    <button
+                      aria-label="Einheit löschen"
+                      className="btn-ghost"
+                      style={{ display: 'inline-flex', padding: 6, color: 'var(--text-faint)' }}
+                      onClick={() => {
+                        if (confirm('Diese Einheit löschen?')) deleteWorkout(w.id)
+                      }}
+                    >
+                      <Trash2 size={18} strokeWidth={ICON_STROKE} aria-hidden />
+                    </button>
                   </div>
-                  <span className="pill" style={{ color: 'var(--xp)' }}>+{w.xpEarned}</span>
-                  <button
-                    aria-label="Einheit löschen"
-                    className="btn-ghost"
-                    style={{ fontSize: 18, padding: 6, color: 'var(--text-faint)' }}
-                    onClick={() => {
-                      if (confirm('Diese Einheit löschen?')) deleteWorkout(w.id)
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ))}
         </div>
