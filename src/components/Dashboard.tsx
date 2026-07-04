@@ -1,8 +1,10 @@
+import { Flame, Dumbbell, Star, Target, Zap } from 'lucide-react'
 import { useStore } from '../state/store'
 import { useDerived } from '../ui/hooks'
 import { MomentumRing } from './MomentumRing'
 import { MiniBarChart } from './MiniBarChart'
 import { TIER_META } from '../domain'
+import { ICON_STROKE } from '../ui/icons'
 
 export function Dashboard({ onLog }: { onLog: () => void }) {
   const name = useStore((s) => s.settings.name)
@@ -16,10 +18,11 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
       <div className="row-between" style={{ marginBottom: 16 }}>
         <div>
           <div className="muted" style={{ fontSize: 14 }}>{greeting},</div>
-          <h1 className="screen-title">{name || 'Athlet'} 👋</h1>
+          <h1 className="screen-title">{name || 'Athlet'}</h1>
         </div>
         <div className="pill" aria-label={`Level ${d.level.level}`}>
-          ⭐ Level {d.level.level}
+          <Star size={16} strokeWidth={ICON_STROKE} aria-hidden />
+          Level {d.level.level}
         </div>
       </div>
 
@@ -28,11 +31,12 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <MomentumRing momentum={d.momentum} />
           <p className="muted" style={{ textAlign: 'center', margin: 0, fontSize: 14 }}>
-            {d.trainedToday ? 'Stark! Heute schon trainiert. 💪' : tierMeta.message}
+            {d.trainedToday ? 'Stark! Heute schon trainiert.' : tierMeta.message}
           </p>
           {!d.trainedToday && (
             <button className="btn btn-primary btn-block" onClick={onLog}>
-              ⚡ Jetzt Training loggen
+              <Zap size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              Jetzt Training loggen
             </button>
           )}
         </div>
@@ -41,7 +45,7 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
         <div className="card">
           <div className="row-between" style={{ marginBottom: 10 }}>
             <strong>Level {d.level.level}</strong>
-            <span className="muted" style={{ fontSize: 13 }}>
+            <span className="muted tnum" style={{ fontSize: 13 }}>
               {d.level.xpIntoLevel} / {d.level.xpForNextLevel} XP
             </span>
           </div>
@@ -61,11 +65,17 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
         {/* Stat tiles */}
         <div className="grid-2">
           <div className="stat">
-            <div className="stat-value">🔥 {d.currentStreak}</div>
+            <div className="stat-value" data-testid="stat-streak">
+              <Flame size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)' }} aria-hidden />
+              <span className="tnum">{d.currentStreak}</span>
+            </div>
             <div className="stat-label">Tage-Streak {d.currentStreak > 0 ? '(never miss twice)' : ''}</div>
           </div>
           <div className="stat">
-            <div className="stat-value">💪 {d.totalWorkouts}</div>
+            <div className="stat-value" data-testid="stat-total-workouts">
+              <Dumbbell size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--text-dim)' }} aria-hidden />
+              <span className="tnum">{d.totalWorkouts}</span>
+            </div>
             <div className="stat-label">Einheiten gesamt</div>
           </div>
         </div>
@@ -73,8 +83,11 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
         {/* Weekly goal */}
         <div className="card">
           <div className="row-between" style={{ marginBottom: 10 }}>
-            <strong>🎯 Wochenziel</strong>
-            <span className="muted" style={{ fontSize: 13 }}>
+            <strong className="row" style={{ gap: 8 }}>
+              <Target size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)' }} aria-hidden />
+              Wochenziel
+            </strong>
+            <span className="muted tnum" style={{ fontSize: 13 }}>
               {d.week.completed} / {d.week.target}
             </span>
           </div>
@@ -83,13 +96,13 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
               className="bar-fill"
               style={{
                 width: `${d.week.ratio * 100}%`,
-                background: d.week.met ? 'var(--success)' : 'var(--accent-grad)',
+                background: d.week.met ? 'var(--state-strong)' : 'var(--accent-grad)',
               }}
             />
           </div>
           <div className="faint" style={{ fontSize: 12, marginTop: 8 }}>
             {d.week.met
-              ? 'Wochenziel erreicht — stark! 🎉'
+              ? 'Wochenziel erreicht — stark!'
               : `Noch ${d.week.target - d.week.completed} Einheit${
                   d.week.target - d.week.completed === 1 ? '' : 'en'
                 } bis zum Ziel.`}

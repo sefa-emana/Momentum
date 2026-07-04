@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
+import { Flame, Star, Target, Zap } from 'lucide-react'
 import type { WorkoutReward } from '../state/store'
+import { achievementIcon, ICON_STROKE } from '../ui/icons'
 
 /**
  * Immediate, celebratory feedback after logging — the "emotional glue" that
@@ -20,10 +22,12 @@ export function RewardOverlay({
   }, [onClose])
 
   const headline = reward.leveledUp
-    ? `Level ${reward.levelAfter}! 🎉`
+    ? `Level ${reward.levelAfter}!`
     : reward.isComeback
-      ? 'Willkommen zurück! 🔄'
-      : 'Stark gemacht! 💪'
+      ? 'Willkommen zurück!'
+      : 'Stark gemacht!'
+
+  const HeroIcon = reward.leveledUp ? Star : reward.isComeback ? Flame : Zap
 
   return (
     <motion.div
@@ -47,20 +51,20 @@ export function RewardOverlay({
           initial={{ scale: 0 }}
           animate={{ scale: 1, rotate: [0, -8, 8, 0] }}
           transition={{ delay: 0.1, duration: 0.6 }}
-          style={{ fontSize: 64 }}
+          style={{ display: 'inline-flex', color: 'var(--accent)' }}
         >
-          {reward.leveledUp ? '⭐' : reward.isComeback ? '🔥' : '⚡'}
+          <HeroIcon size={64} strokeWidth={ICON_STROKE} aria-hidden />
         </motion.div>
 
         <h2 style={{ fontSize: 26, marginTop: 8 }}>{headline}</h2>
 
         <motion.div
+          className="hero-number"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
           style={{
             fontSize: 40,
-            fontWeight: 800,
             color: 'var(--xp)',
             margin: '12px 0 4px',
           }}
@@ -69,12 +73,14 @@ export function RewardOverlay({
         </motion.div>
 
         <div className="row" style={{ justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-          <span className="pill" style={{ borderColor: 'var(--accent)', color: 'var(--accent-2)' }}>
-            🔥 Momentum {Math.round(reward.momentumAfter)}
+          <span className="pill" style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+            <Flame size={14} strokeWidth={ICON_STROKE} aria-hidden />
+            Momentum {Math.round(reward.momentumAfter)}
           </span>
           {reward.goalJustMet && (
-            <span className="pill" style={{ borderColor: 'var(--success)', color: 'var(--success)' }}>
-              🎯 Wochenziel! +{reward.goalBonusXp} XP
+            <span className="pill" style={{ borderColor: 'var(--state-strong)', color: 'var(--state-strong)' }}>
+              <Target size={14} strokeWidth={ICON_STROKE} aria-hidden />
+              Wochenziel! +{reward.goalBonusXp} XP
             </span>
           )}
         </div>
@@ -84,22 +90,27 @@ export function RewardOverlay({
             <div className="faint" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Neuer Erfolg
             </div>
-            {reward.newAchievements.map((a, i) => (
-              <motion.div
-                key={a.id}
-                className="list-item"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 + i * 0.1 }}
-              >
-                <span style={{ fontSize: 30 }}>{a.icon}</span>
-                <div style={{ textAlign: 'left', flex: 1 }}>
-                  <strong>{a.title}</strong>
-                  <div className="muted" style={{ fontSize: 13 }}>{a.description}</div>
-                </div>
-                <span className="pill" style={{ color: 'var(--xp)' }}>+{a.bonusXp}</span>
-              </motion.div>
-            ))}
+            {reward.newAchievements.map((a, i) => {
+              const Icon = achievementIcon(a.id)
+              return (
+                <motion.div
+                  key={a.id}
+                  className="list-item"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.35 + i * 0.1 }}
+                >
+                  <span className="badge-icon" aria-hidden>
+                    <Icon size={22} strokeWidth={ICON_STROKE} />
+                  </span>
+                  <div style={{ textAlign: 'left', flex: 1 }}>
+                    <strong>{a.title}</strong>
+                    <div className="muted" style={{ fontSize: 13 }}>{a.description}</div>
+                  </div>
+                  <span className="pill" style={{ color: 'var(--xp)' }}>+{a.bonusXp}</span>
+                </motion.div>
+              )
+            })}
           </div>
         )}
 

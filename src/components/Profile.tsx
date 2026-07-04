@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Clock, Download, Flame, Monitor, Moon, Sun, Upload } from 'lucide-react'
 import { useStore } from '../state/store'
 import { useDerived } from '../ui/hooks'
 import {
@@ -6,6 +7,14 @@ import {
   MIN_WEEKLY_GOAL,
   type AppState,
 } from '../domain'
+import { ICON_STROKE } from '../ui/icons'
+import { getTheme, setTheme, type ThemePref } from '../ui/theme'
+
+const THEME_OPTIONS: { id: ThemePref; label: string; Icon: typeof Monitor }[] = [
+  { id: 'auto', label: 'Auto', Icon: Monitor },
+  { id: 'dark', label: 'Dunkel', Icon: Moon },
+  { id: 'light', label: 'Hell', Icon: Sun },
+]
 
 export function Profile() {
   const settings = useStore((s) => s.settings)
@@ -18,6 +27,12 @@ export function Profile() {
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState('')
+  const [theme, setThemePref] = useState<ThemePref>(() => getTheme())
+
+  const changeTheme = (pref: ThemePref) => {
+    setTheme(pref)
+    setThemePref(pref)
+  }
 
   const exportData = () => {
     const state = useStore.getState()
@@ -66,11 +81,17 @@ export function Profile() {
       <div className="stack" style={{ gap: 16 }}>
         <div className="grid-2">
           <div className="stat">
-            <div className="stat-value">⏱️ {Math.round(d.totalMinutes / 60)}h</div>
+            <div className="stat-value">
+              <Clock size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--text-dim)' }} aria-hidden />
+              <span className="tnum">{Math.round(d.totalMinutes / 60)}h</span>
+            </div>
             <div className="stat-label">Trainingszeit gesamt</div>
           </div>
           <div className="stat">
-            <div className="stat-value">🏅 {d.longestStreak}</div>
+            <div className="stat-value">
+              <Flame size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)' }} aria-hidden />
+              <span className="tnum">{d.longestStreak}</span>
+            </div>
             <div className="stat-label">Längste Streak</div>
           </div>
         </div>
@@ -101,6 +122,24 @@ export function Profile() {
             />
           </div>
 
+          <div>
+            <span className="field-label">Design</span>
+            <div className="segmented" role="group" aria-label="Design-Modus">
+              {THEME_OPTIONS.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  data-active={theme === id}
+                  aria-pressed={theme === id}
+                  onClick={() => changeTheme(id)}
+                >
+                  <Icon size={16} strokeWidth={ICON_STROKE} aria-hidden />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="row-between" style={{ cursor: 'pointer' }}>
             <span>Animationen reduzieren</span>
             <input
@@ -119,8 +158,14 @@ export function Profile() {
             ein Backup oder übertrage sie auf ein anderes Gerät.
           </p>
           <div className="row" style={{ gap: 10 }}>
-            <button className="btn btn-block" onClick={exportData}>⬇️ Backup</button>
-            <button className="btn btn-block" onClick={() => fileRef.current?.click()}>⬆️ Import</button>
+            <button className="btn btn-block" onClick={exportData}>
+              <Download size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              Backup
+            </button>
+            <button className="btn btn-block" onClick={() => fileRef.current?.click()}>
+              <Upload size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              Import
+            </button>
           </div>
           <input
             ref={fileRef}
