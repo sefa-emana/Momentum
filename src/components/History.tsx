@@ -1,0 +1,93 @@
+import { useStore } from '../state/store'
+import { INTENSITY_META, WORKOUT_TYPE_META, type Workout } from '../domain'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
+
+export function History() {
+  const workouts = useStore((s) => s.workouts)
+  const deleteWorkout = useStore((s) => s.deleteWorkout)
+
+  const sorted = [...workouts].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  )
+
+  const groups = groupByDay(sorted)
+
+  return (
+    <div className="screen">
+      <h1 className="screen-title">Verlauf</h1>
+      <p className="screen-sub">{workouts.length} Einheiten insgesamt</p>
+
+      {sorted.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 30 }}>
+          <div style={{ fontSize: 40 }}>📭</div>
+          <p className="muted">Noch keine Einheiten. Tippe auf +, um loszulegen.</p>
+        </div>
+      ) : (
+        <div className="stack" style={{ gap: 20 }}>
+          {groups.map(([day, items]) => (
+            <div key={day} className="stack" style={{ gap: 8 }}>
+              <div className="faint" style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {formatDayHeader(day)}
+              </div>
+              {items.map((w) => (
+                <div key={w.id} className="list-item">
+                  <span style={{ fontSize: 26 }} aria-hidden>
+                    {WORKOUT_TYPE_META[w.type].icon}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="row" style={{ gap: 8 }}>
+                      <strong>{WORKOUT_TYPE_META[w.type].label}</strong>
+                      <span className="faint" style={{ fontSize: 12 }}>
+                        {INTENSITY_META[w.intensity].icon} {w.durationMin}′
+                      </span>
+                    </div>
+                    {w.note && (
+                      <div className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {w.note}
+                      </div>
+                    )}
+                    <div className="faint" style={{ fontSize: 11.5 }}>
+                      {format(new Date(w.date), 'HH:mm', { locale: de })} Uhr
+                    </div>
+                  </div>
+                  <span className="pill" style={{ color: 'var(--xp)' }}>+{w.xpEarned}</span>
+                  <button
+                    aria-label="Einheit löschen"
+                    className="btn-ghost"
+                    style={{ fontSize: 18, padding: 6, color: 'var(--text-faint)' }}
+                    onClick={() => {
+                      if (confirm('Diese Einheit löschen?')) deleteWorkout(w.id)
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function groupByDay(workouts: Workout[]): [string, Workout[]][] {
+  const map = new Map<string, Workout[]>()
+  for (const w of workouts) {
+    const key = format(new Date(w.date), 'yyyy-MM-dd')
+    const arr = map.get(key) ?? []
+    arr.push(w)
+    map.set(key, arr)
+  }
+  return [...map.entries()]
+}
+
+function formatDayHeader(day: string): string {
+  const d = new Date(`${day}T12:00:00`)
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+  if (day === today) return 'Heute'
+  if (day === yesterday) return 'Gestern'
+  return format(d, 'EEEE, d. MMMM', { locale: de })
+}
