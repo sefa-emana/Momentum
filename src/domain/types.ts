@@ -26,6 +26,30 @@ export interface Workout {
   note?: string
   /** XP awarded for this workout at the time it was logged. */
   xpEarned: number
+  /** Optional post-session RPE ("Wie hart war's wirklich?"): a 4-option tap
+   *  (locker 3 / solide 5 / hart 7 / alles 9) that sharpens the session load
+   *  beyond the intensity default. */
+  feel?: number
+  /** User marked "heute eine Übung/Bestzeit gesteigert" — the honest bridge to
+   *  mechanical overload without an exercise database. */
+  prBeaten?: boolean
+  /** Optional mood tap before the session (1–5). */
+  moodBefore?: 1 | 2 | 3 | 4 | 5
+  /** Optional mood tap after the session (1–5). Affective response predicts
+   *  adherence 6–12 months out (PMC2390920). */
+  moodAfter?: 1 | 2 | 3 | 4 | 5
+}
+
+/**
+ * A "Life happened" pause (Gentler Streak): a manual switch for illness/travel.
+ * Days inside a pause count as neither active nor inactive — decay and streak
+ * freeze without guilt. `to === null` means the pause is still active.
+ */
+export interface Pause {
+  /** ISO date the pause began. */
+  from: string
+  /** ISO date the pause ended, or null while still active. */
+  to: string | null
 }
 
 export type MomentumTier = 'cold' | 'warm' | 'hot' | 'blazing'
@@ -68,6 +92,11 @@ export interface AppState {
   /** ISO-week keys for which the weekly-goal bonus has already been granted,
    *  so it is awarded at most once per week. */
   goalMetWeeks: string[]
+  /** ISO-week keys for which the weekly progress bonus (beating last week's
+   *  load) has already been granted — same once-per-week guarantee. */
+  progressWeeks: string[]
+  /** "Life happened" pauses that freeze decay and streaks. */
+  pauses: Pause[]
   unlocked: UnlockedAchievement[]
   settings: Settings
   /** True once the user has finished onboarding. */

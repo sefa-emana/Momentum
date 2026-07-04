@@ -33,6 +33,8 @@ export function useDerived(): DerivedState {
   const workouts = useStore((s) => s.workouts)
   const bonusXp = useStore((s) => s.bonusXp)
   const goalMetWeeks = useStore((s) => s.goalMetWeeks)
+  const progressWeeks = useStore((s) => s.progressWeeks)
+  const pauses = useStore((s) => s.pauses)
   const unlocked = useStore((s) => s.unlocked)
   const settings = useStore((s) => s.settings)
   const createdAt = useStore((s) => s.createdAt)
@@ -40,7 +42,18 @@ export function useDerived(): DerivedState {
   const onboarded = useStore((s) => s.onboarded)
 
   return deriveState(
-    { version, createdAt, workouts, bonusXp, goalMetWeeks, unlocked, settings, onboarded },
+    {
+      version,
+      createdAt,
+      workouts,
+      bonusXp,
+      goalMetWeeks,
+      progressWeeks,
+      pauses,
+      unlocked,
+      settings,
+      onboarded,
+    },
     now,
   )
 }

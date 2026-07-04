@@ -27,6 +27,8 @@ export function Profile() {
       workouts: state.workouts,
       bonusXp: state.bonusXp,
       goalMetWeeks: state.goalMetWeeks,
+      progressWeeks: state.progressWeeks,
+      pauses: state.pauses,
       unlocked: state.unlocked,
       settings: state.settings,
       onboarded: state.onboarded,

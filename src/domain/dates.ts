@@ -3,6 +3,7 @@
  * local timezone, which is what matters for streaks, decay and weekly goals.
  */
 import {
+  addDays,
   differenceInCalendarDays,
   startOfDay,
   parseISO,
@@ -10,6 +11,7 @@ import {
   endOfWeek,
   isWithinInterval,
 } from 'date-fns'
+import type { Pause } from './types'
 
 export function toDate(value: string | Date): Date {
   return typeof value === 'string' ? parseISO(value) : value
@@ -40,6 +42,38 @@ export function weekInterval(now: string | Date): { start: Date; end: Date } {
 export function isInThisWeek(value: string | Date, now: string | Date): boolean {
   const { start, end } = weekInterval(now)
   return isWithinInterval(toDate(value), { start, end })
+}
+
+/** Whether a given calendar day (by dayKey) falls inside any pause. An open
+ *  pause (`to === null`) extends indefinitely into the future. */
+export function isPausedDay(day: string | Date, pauses: Pause[]): boolean {
+  const key = dayKey(day)
+  return pauses.some((p) => {
+    const from = dayKey(p.from)
+    const to = p.to === null ? '9999-12-31' : dayKey(p.to)
+    return key >= from && key <= to
+  })
+}
+
+/**
+ * Count the paused calendar days strictly between two instants (exclusive of
+ * both endpoints, which are themselves active/observation days). This is what
+ * lets a pause "freeze" decay and streaks: paused days are subtracted from the
+ * gap so they count as neither active nor inactive.
+ */
+export function pausedDaysBetween(
+  earlier: string | Date,
+  later: string | Date,
+  pauses: Pause[],
+): number {
+  if (pauses.length === 0) return 0
+  const total = daysBetween(earlier, later)
+  const start = startOfDay(toDate(earlier))
+  let count = 0
+  for (let i = 1; i < total; i++) {
+    if (isPausedDay(addDays(start, i), pauses)) count += 1
+  }
+  return count
 }
 
 /** Stable identifier for the ISO week a date falls in (e.g. "2026-W27"). */
