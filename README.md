@@ -65,10 +65,29 @@ node scripts/generate-icons.mjs
 
 ## Deployment
 
-Push auf `main` (oder den Feature-Branch) löst die GitHub-Actions-Pipeline
+Push auf `main` oder einen `claude/**`-Branch löst die GitHub-Actions-Pipeline
 (`.github/workflows/ci.yml`) aus: Typecheck → Lint → Unit-Tests → Build →
-E2E-Tests → Deploy auf **GitHub Pages**. Die Pages-Umgebung wird beim ersten
-Lauf automatisch aktiviert.
+E2E-Tests → Deploy auf **GitHub Pages**.
+
+### Einmalige Aktivierung von GitHub Pages
+
+GitHub Pages muss pro Repository **einmal** freigeschaltet werden — das ist die
+einzige manuelle Aktion:
+
+1. **Repository → Settings → Pages → Build and deployment → Source:**
+   `GitHub Actions` auswählen.
+2. Falls das Repo **privat** ist: GitHub Pages ist für private Repos nur mit
+   einem bezahlten Plan verfügbar. Auf dem Free-Plan das Repo unter
+   **Settings → General → Change repository visibility** auf **public** stellen
+   (die App enthält keinerlei Geheimnisse — reiner Frontend-Code, Daten liegen
+   nur lokal im Browser).
+
+Danach deployt jeder weitere Push automatisch. Die Live-URL ist dann
+`https://<user>.github.io/Momentum/`.
+
+> Hinweis: Aus dieser automatisierten Umgebung heraus sind das Umschalten der
+> Repo-Sichtbarkeit und das Aktivieren von Pages per API gesperrt — diese
+> beiden Klicks muss der Repo-Owner einmalig selbst machen.
 
 Der Vite-`base`-Pfad ist `/Momentum/` (Projekt-Site). Für ein Deployment unter
 anderem Pfad `BASE_PATH` setzen.

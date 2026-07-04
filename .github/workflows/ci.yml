@@ -14,9 +14,10 @@ permissions:
   pages: write
   id-token: write
 
-# Only one Pages deployment at a time; don't cancel an in-progress deploy.
+# Only one Pages deployment at a time (constant group, per GitHub's guidance);
+# don't cancel an in-progress deploy.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages
   cancel-in-progress: false
 
 jobs:

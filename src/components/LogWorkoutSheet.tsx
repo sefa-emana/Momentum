@@ -53,7 +53,16 @@ export function LogWorkoutSheet({
   }
 
   return (
-    <div className="overlay-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Training loggen">
+    <motion.div
+      className="overlay-backdrop"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Training loggen"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
       <motion.div
         className="sheet"
         onClick={(e) => e.stopPropagation()}
@@ -153,6 +162,6 @@ export function LogWorkoutSheet({
           </button>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }

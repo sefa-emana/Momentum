@@ -26,7 +26,16 @@ export function RewardOverlay({
       : 'Stark gemacht! 💪'
 
   return (
-    <div className="reward-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Belohnung">
+    <motion.div
+      className="reward-backdrop"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Belohnung"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
       <motion.div
         className="reward-card"
         initial={{ scale: 0.8, opacity: 0, y: 20 }}
@@ -98,6 +107,6 @@ export function RewardOverlay({
           Weiter
         </button>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }

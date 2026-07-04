@@ -215,6 +215,45 @@ export function reduceLogWorkout(
   return { next, reward }
 }
 
+/**
+ * Rebuild the full state from a set of workouts by replaying them
+ * chronologically. Because momentum, XP, goal bonuses and achievements are
+ * all deterministic functions of the history, this keeps the derived
+ * accumulators (bonusXp / goalMetWeeks / unlocked) perfectly consistent —
+ * essential after a deletion, which would otherwise leave them stranded.
+ */
+export function rebuildFromWorkouts(
+  prev: Pick<AppState, 'createdAt' | 'onboarded' | 'settings' | 'version'>,
+  workouts: Workout[],
+): AppState {
+  const sorted = [...workouts].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+
+  let base: AppState = {
+    ...initialState(),
+    version: prev.version,
+    createdAt: prev.createdAt,
+    onboarded: prev.onboarded,
+    settings: prev.settings,
+  }
+
+  for (const w of sorted) {
+    base = reduceLogWorkout(base, {
+      type: w.type,
+      durationMin: w.durationMin,
+      intensity: w.intensity,
+      note: w.note,
+      date: w.date,
+    }).next
+  }
+
+  // Preserve the original workout ids (replay regenerates them). The replay
+  // processes workouts in the same chronological order, so indices align.
+  base.workouts = base.workouts.map((w, i) => ({ ...w, id: sorted[i].id }))
+  return base
+}
+
 export const useStore = create<Store>()(
   persist(
     (set, get) => ({
@@ -227,7 +266,13 @@ export const useStore = create<Store>()(
       },
 
       deleteWorkout: (id) => {
-        set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) }))
+        set((s) => {
+          const remaining = s.workouts.filter((w) => w.id !== id)
+          // Replay so bonus XP, weekly-goal credit and achievements stay
+          // consistent with the reduced history (they are non-invertible
+          // accumulators otherwise).
+          return rebuildFromWorkouts(s, remaining)
+        })
       },
 
       setWeeklyGoal: (n) => {

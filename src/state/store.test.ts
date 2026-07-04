@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { initialState, reduceLogWorkout, type LogWorkoutInput } from './store'
+import {
+  initialState,
+  rebuildFromWorkouts,
+  reduceLogWorkout,
+  type LogWorkoutInput,
+} from './store'
 import { deriveState } from './selectors'
 import { dayOffset } from '../domain/testHelpers'
 
@@ -110,5 +115,55 @@ describe('deriveState integration', () => {
     expect(derived.totalWorkouts).toBe(0)
     expect(derived.momentum).toBe(0)
     expect(derived.currentStreak).toBe(0)
+  })
+})
+
+describe('rebuildFromWorkouts (deletion consistency)', () => {
+  it('reconciles bonus XP, goals and achievements after deletion', () => {
+    // Log 4 sessions to meet the default weekly goal (bonus + achievements).
+    let state = initialState()
+    for (let d = 0; d < 4; d++) state = log(state, { date: dayOffset(BASE, d) }).next
+    expect(state.bonusXp).toBeGreaterThan(0)
+    expect(state.goalMetWeeks.length).toBe(1)
+
+    // Delete everything → rebuilding from an empty history must reset the
+    // accumulators, not strand them.
+    const rebuilt = rebuildFromWorkouts(state, [])
+    expect(rebuilt.workouts).toHaveLength(0)
+    expect(rebuilt.bonusXp).toBe(0)
+    expect(rebuilt.goalMetWeeks).toHaveLength(0)
+    expect(rebuilt.unlocked).toHaveLength(0)
+
+    const derived = deriveState(rebuilt, dayOffset(BASE, 3))
+    expect(derived.totalXp).toBe(0)
+    expect(derived.level.level).toBe(1)
+  })
+
+  it('preserves the settings and remaining workout ids', () => {
+    let state = initialState()
+    state = log(state, { date: dayOffset(BASE, 0) }).next
+    state = log(state, { date: dayOffset(BASE, 1) }).next
+    const keepId = state.workouts[0].id
+
+    const rebuilt = rebuildFromWorkouts(state, [state.workouts[0]])
+    expect(rebuilt.workouts).toHaveLength(1)
+    expect(rebuilt.workouts[0].id).toBe(keepId)
+    expect(rebuilt.settings).toEqual(state.settings)
+  })
+
+  it('does not re-lose a weekly goal that is re-achieved after deletion', () => {
+    // Meet goal, delete all, then meet it again → bonus must be granted again.
+    let state = initialState()
+    for (let d = 0; d < 4; d++) state = log(state, { date: dayOffset(BASE, d) }).next
+    state = rebuildFromWorkouts(state, [])
+
+    let lastReward
+    for (let d = 0; d < 4; d++) {
+      const r = log(state, { date: dayOffset(BASE, d) })
+      state = r.next
+      lastReward = r.reward
+    }
+    expect(lastReward!.goalJustMet).toBe(true)
+    expect(lastReward!.goalBonusXp).toBeGreaterThan(0)
   })
 })

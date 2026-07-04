@@ -6,7 +6,8 @@ import { isInThisWeek, weekKey } from './dates'
 import type { Workout } from './types'
 
 export interface WeekProgress {
-  /** Distinct-day workouts logged in the current week counting toward goal. */
+  /** Workout sessions logged in the current week counting toward the goal
+   *  (a two-a-day counts as two — see the count in weekProgress). */
   completed: number
   target: number
   /** 0–1, clamped. */

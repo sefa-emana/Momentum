@@ -57,7 +57,10 @@ export function computeMomentum(workouts: Workout[], now: string | Date): number
       const gap = daysBetween(prevDate, w.date)
       // Only the first session of a day boosts momentum.
       if (gap <= 0) continue
-      momentum = applyDecay(momentum, gap)
+      // The later day is itself an active training day, so the number of
+      // *inactive* days between the two sessions is gap - 1. This is what
+      // makes a single rest day (gap = 2) cost zero decay.
+      momentum = applyDecay(momentum, gap - 1)
       const gain = gap >= COMEBACK_GAP_DAYS ? COMEBACK_GAIN : MOMENTUM_GAIN
       momentum = Math.min(MOMENTUM_MAX, Math.max(MOMENTUM_FLOOR, momentum + gain))
     } else {
@@ -66,10 +69,11 @@ export function computeMomentum(workouts: Workout[], now: string | Date): number
     prevDate = w.date
   }
 
-  // Decay from the last workout up to now.
+  // Decay from the last workout up to now. "Today" is still in progress and
+  // not yet a missed day, so full inactive days = daysSince - 1.
   if (prevDate !== null) {
-    const gap = Math.max(0, daysBetween(prevDate, now))
-    momentum = applyDecay(momentum, gap)
+    const inactiveDays = Math.max(0, daysBetween(prevDate, now) - 1)
+    momentum = applyDecay(momentum, inactiveDays)
   }
 
   return Math.round(momentum)

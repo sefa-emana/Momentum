@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { useStore } from './state/store'
 import { Onboarding } from './components/Onboarding'
 import { Dashboard } from './components/Dashboard'
@@ -41,19 +42,24 @@ export default function App() {
 
       <BottomNav tab={tab} onChange={setTab} />
 
-      {logOpen && (
-        <LogWorkoutSheet
-          onClose={() => setLogOpen(false)}
-          onLogged={(r) => {
-            setLogOpen(false)
-            setReward(r)
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {logOpen && (
+          <LogWorkoutSheet
+            key="log-sheet"
+            onClose={() => setLogOpen(false)}
+            onLogged={(r) => {
+              setLogOpen(false)
+              setReward(r)
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {reward && (
-        <RewardOverlay reward={reward} onClose={() => setReward(null)} />
-      )}
+      <AnimatePresence>
+        {reward && (
+          <RewardOverlay key="reward" reward={reward} onClose={() => setReward(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

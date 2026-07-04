@@ -58,6 +58,24 @@ describe('computeMomentum', () => {
     expect(m).toBeGreaterThan(50)
   })
 
+  it('does not penalise a single rest day between sessions', () => {
+    // Training every other day (one rest day between each) must not decay:
+    // the design promise is "one full rest day costs zero momentum".
+    const everyOtherDay = [0, 2, 4, 6].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const consecutive = [0, 1, 2, 3].map((d) => makeWorkout(dayOffset(BASE, d)))
+    expect(computeMomentum(everyOtherDay, dayOffset(BASE, 6))).toBe(
+      computeMomentum(consecutive, dayOffset(BASE, 3)),
+    )
+  })
+
+  it('does not decay one day after a workout (rest day is free)', () => {
+    const built = [0, 1, 2].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const atPeak = computeMomentum(built, dayOffset(BASE, 2))
+    // One and two days later still costs nothing (one forgiven rest day).
+    expect(computeMomentum(built, dayOffset(BASE, 3))).toBe(atPeak)
+    expect(computeMomentum(built, dayOffset(BASE, 4))).toBe(atPeak)
+  })
+
   it('reaches the max with sustained training', () => {
     const workouts = Array.from({ length: 12 }, (_, d) => makeWorkout(dayOffset(BASE, d)))
     const m = computeMomentum(workouts, dayOffset(BASE, 11))

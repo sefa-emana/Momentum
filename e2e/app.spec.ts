@@ -56,6 +56,22 @@ test.describe('Logging workouts', () => {
     await expect(page.getByText('Cardio')).toBeVisible()
     await expect(page.getByText('Heute')).toBeVisible()
   })
+
+  test('deleting a workout removes it and resets derived stats', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page, { type: 'Cardio' })
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await expect(page.getByText('Cardio')).toBeVisible()
+
+    page.on('dialog', (d) => d.accept())
+    await page.getByRole('button', { name: 'Einheit löschen' }).click()
+    await expect(page.getByText('Noch keine Einheiten. Tippe auf +, um loszulegen.')).toBeVisible()
+
+    // Back on the dashboard the count is reset to zero.
+    await page.getByRole('button', { name: 'Home' }).click()
+    await expect(page.getByText('💪 0')).toBeVisible()
+  })
 })
 
 test.describe('Momentum & streak', () => {
