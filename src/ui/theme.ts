@@ -5,6 +5,10 @@
  * 'auto' follows the OS `prefers-color-scheme`; 'dark' / 'light' pin it.
  * The resolved theme is written to `data-theme` on <html> and drives the
  * token overrides in theme.css.
+ *
+ * The design is light-first: when a user has never chosen a preference the
+ * fallback is 'light' (a clean, near-white canvas), not 'auto'. Users who have
+ * explicitly picked Auto / Dunkel / Hell keep their stored choice.
  */
 
 export type ThemePref = 'auto' | 'dark' | 'light'
@@ -20,7 +24,8 @@ export function getTheme(): ThemePref {
   } catch {
     /* localStorage unavailable — fall through to default */
   }
-  return 'auto'
+  // Light-first default: no stored preference → clean light canvas.
+  return 'light'
 }
 
 /** Resolve a preference to the concrete theme actually rendered. */

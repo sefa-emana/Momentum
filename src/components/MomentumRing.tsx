@@ -35,8 +35,8 @@ export function MomentumRing({
       <svg width={size} height={size} role="img" aria-label={`Momentum ${momentum} von 100, ${meta.label}`}>
         <defs>
           <linearGradient id="momentum-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ff6b3d" />
-            <stop offset="100%" stopColor="#ff3d6e" />
+            <stop offset="0%" stopColor="var(--accent)" />
+            <stop offset="100%" stopColor="var(--accent-hot)" />
           </linearGradient>
         </defs>
         <circle

@@ -6,17 +6,17 @@
 :root {
   color-scheme: dark;
 
-  /* ---- surface ladder (dark) ---- */
-  --bg: #0a0e1a;
-  --surface-1: #111725;
-  --surface-2: #1a2234;
-  --surface-3: #232d42;
-  --hairline: rgba(255, 255, 255, 0.07);
+  /* ---- surface ladder (dark) — NEUTRAL graphite, no blue tint ---- */
+  --bg: #0c0c0e;
+  --surface-1: #161618;
+  --surface-2: #1e1e21;
+  --surface-3: #26262a;
+  --hairline: rgba(255, 255, 255, 0.08);
 
-  /* ---- text ---- */
-  --text: #f4f6fb;
-  --text-dim: #a7b0c4;
-  --text-faint: #5e6a82;
+  /* ---- text — neutral ---- */
+  --text: #f5f5f7;
+  --text-dim: #a1a1a6;
+  --text-faint: #6e6e73;
 
   /* ---- accent (single stop + hero gradient) ---- */
   --accent: #ff6b3d;
@@ -24,39 +24,44 @@
   --accent-grad: linear-gradient(135deg, #ff6b3d, #ff3d6e);
   /* Semi-transparent variant used on glass (backdrop shows through). */
   --accent-grad-glass: linear-gradient(135deg, rgba(255, 107, 61, 0.9), rgba(255, 61, 110, 0.85));
-  --accent-glow: rgba(255, 107, 61, 0.55);
+  --accent-glow: rgba(255, 107, 61, 0.5);
+  /* Soft accent tint for surfaces (badges, active chips) — theme-aware. */
+  --accent-tint: rgba(255, 107, 61, 0.16);
 
-  /* ---- XP (violet) ---- */
-  --xp: #7c5cff;
-  --xp-2: #a78bfa;
-  --xp-grad: linear-gradient(135deg, #7c5cff, #a78bfa);
+  /* ---- XP — DEMOTED to neutral graphite (no purple) ---- */
+  --xp: #d4d4d8;
+  --xp-2: #a1a1aa;
+  --xp-grad: linear-gradient(135deg, #e4e4e7, #a1a1aa);
 
-  /* ---- status triad ---- */
-  --state-strong: #3ddc97;
-  --state-steady: #ffc24b;
-  --state-rest: #5b8def;
+  /* ---- status triad — muted, calm ---- */
+  --state-strong: #34c759;
+  --state-steady: #ff9f0a;
+  --state-rest: #8e8e93;
 
-  /* ---- heatmap ramp (dark): empty → deep blue → mid blue → orange → hot.
-     Relative to the user's own rolling max; AA-distinguishable steps. ---- */
-  --heat-0: #161d2e;
-  --heat-1: #1f3b63;
-  --heat-2: #2e6fb8;
-  --heat-3: #e07b34;
-  --heat-4: #ff4f3a;
+  /* ---- heatmap ramp (dark): empty graphite → warm → accent orange.
+     No blue steps. Relative to the user's own rolling max. ---- */
+  --heat-0: #1e1e21;
+  --heat-1: #4a3527;
+  --heat-2: #8a4e2c;
+  --heat-3: #d2733a;
+  --heat-4: #ff6b3d;
 
-  /* ---- glass engine (dark) ---- */
-  --glass-fill: rgba(22, 29, 52, 0.55);
-  --glass-fill-strong: rgba(18, 24, 44, 0.72);
-  --glass-fill-thin: rgba(30, 38, 66, 0.4);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-highlight: rgba(255, 255, 255, 0.5); /* top inset specular */
-  --glass-lowlight: rgba(0, 0, 0, 0.28); /* bottom inset lowlight */
+  /* ---- glass engine (dark) — neutral graphite tint ---- */
+  --glass-fill: rgba(30, 30, 33, 0.6);
+  --glass-fill-strong: rgba(22, 22, 24, 0.78);
+  --glass-fill-thin: rgba(38, 38, 42, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.4); /* top inset specular */
+  --glass-lowlight: rgba(0, 0, 0, 0.3); /* bottom inset lowlight */
+
+  /* ---- overlay scrim (neutral, not navy) ---- */
+  --scrim: rgba(0, 0, 0, 0.6);
 
   /* ---- solid content cards (dark) ---- */
   --card-bg: var(--surface-1);
   --card-border: var(--hairline);
-  --card-specular: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --card-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6);
+  --card-specular: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.7);
 
   --tile-bg: var(--surface-1);
   --tile-border: var(--hairline);
@@ -91,51 +96,70 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  /* ---- surfaces (light) — Apple gray canvas, white cards ---- */
-  --bg: #f2f2f7;
+  /* ===== PRIMARY DESIGN — premium-minimal, light-first =====
+     Clean near-white canvas, pure-white cards, soft shadows, no borders. */
+
+  /* ---- surfaces (light) — Apple-gray canvas, white cards ---- */
+  --bg: #f7f7f9;
   --surface-1: #ffffff;
   --surface-2: #ffffff;
-  --surface-3: #e9e9ef;
-  --hairline: rgba(60, 60, 67, 0.2);
+  --surface-3: #eeeef1; /* tracks, controls, empty cells */
+  --hairline: rgba(0, 0, 0, 0.06);
 
-  /* ---- text ---- */
-  --text: #1c1c1e;
-  --text-dim: rgba(60, 60, 67, 0.6);
-  --text-faint: rgba(60, 60, 67, 0.45);
+  /* ---- text — high contrast, calm ---- */
+  --text: #17171a;
+  --text-dim: #6e7076;
+  --text-faint: #a6a8af;
 
-  /* ---- heatmap ramp (light): light gray-blue → pale blue → pale orange →
-     orange → hot orange. ---- */
-  --heat-0: #e8ebf1;
-  --heat-1: #c3d8ef;
-  --heat-2: #f6c884;
-  --heat-3: #ef8f2e;
-  --heat-4: #dd4f1e;
+  /* ---- accent tint (softer on white) ---- */
+  --accent-glow: rgba(255, 107, 61, 0.35);
+  --accent-tint: rgba(255, 107, 61, 0.12);
 
-  /* ---- glass engine (light) ---- */
-  --glass-fill: rgba(255, 255, 255, 0.62);
-  --glass-fill-strong: rgba(255, 255, 255, 0.78);
-  --glass-fill-thin: rgba(255, 255, 255, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.7);
-  --glass-highlight: rgba(255, 255, 255, 0.85);
-  --glass-lowlight: rgba(0, 0, 0, 0.06);
+  /* ---- XP — neutral dark graphite on light (no purple) ---- */
+  --xp: #3a3a3c;
+  --xp-2: #6e6e73;
+  --xp-grad: linear-gradient(135deg, #3a3a3c, #1c1c1e);
+
+  /* ---- status triad — muted tones that fit white ---- */
+  --state-strong: #34c759;
+  --state-steady: #ff9f0a;
+  --state-rest: #98989d;
+
+  /* ---- heatmap ramp (light): neutral gray → warm orange (no blue) ---- */
+  --heat-0: #ececef;
+  --heat-1: #f6d9c0;
+  --heat-2: #fbb985;
+  --heat-3: #ff9552;
+  --heat-4: #ff6b3d;
+
+  /* ---- glass engine (light) — bright frosted white ---- */
+  --glass-fill: rgba(255, 255, 255, 0.72);
+  --glass-fill-strong: rgba(255, 255, 255, 0.85);
+  --glass-fill-thin: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-lowlight: rgba(0, 0, 0, 0.05);
+
+  /* ---- overlay scrim (lighter on white) ---- */
+  --scrim: rgba(23, 23, 26, 0.32);
 
   /* ---- solid content cards (light) — white, soft shadow, no border ---- */
   --card-bg: #ffffff;
   --card-border: transparent;
   --card-specular: inset 0 1px 0 transparent;
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(17, 24, 39, 0.06);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.05);
 
   --tile-bg: #ffffff;
   --tile-border: transparent;
   --control-bg: #ffffff;
-  --control-border: rgba(60, 60, 67, 0.2);
+  --control-border: rgba(0, 0, 0, 0.08);
 
   /* legacy aliases */
   --bg-elevated: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-2: #f2f2f7;
-  --border: rgba(60, 60, 67, 0.2);
-  --border-soft: rgba(60, 60, 67, 0.14);
+  --bg-card-2: #f7f7f9;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-soft: rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -165,6 +189,7 @@ body {
   justify-content: center;
 }
 
+/* Flat, clean canvas — no decorative background glow in either theme. */
 .app-shell {
   width: 100%;
   max-width: var(--maxw);
@@ -172,15 +197,7 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  background:
-    radial-gradient(900px 500px at 50% -5%, rgba(255, 107, 61, 0.14) 0%, transparent 55%),
-    var(--bg);
-}
-
-:root[data-theme='light'] .app-shell {
-  background:
-    radial-gradient(900px 520px at 50% -8%, rgba(255, 107, 61, 0.1) 0%, transparent 60%),
-    var(--bg);
+  background: var(--bg);
 }
 
 h1, h2, h3, h4 {
@@ -253,14 +270,14 @@ input, select, textarea {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 20px;
   box-shadow: var(--card-specular), var(--card-shadow);
 }
 
-.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; align-items: center; gap: 12px; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 .icon-inline {
   display: inline-flex;
@@ -346,7 +363,7 @@ input, select, textarea {
   background: var(--tile-bg);
   border: 1px solid var(--tile-border);
   border-radius: var(--radius-sm);
-  padding: 14px;
+  padding: 16px;
   box-shadow: var(--card-specular), var(--card-shadow);
 }
 .stat-value { font-size: 24px; display: flex; align-items: center; gap: 8px; }
@@ -451,7 +468,7 @@ input, select, textarea {
 .overlay-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 7, 16, 0.55);
+  background: var(--scrim);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   z-index: 60;
@@ -514,7 +531,7 @@ input, select, textarea {
 .reward-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 7, 16, 0.72);
+  background: var(--scrim);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   z-index: 80;
@@ -615,9 +632,8 @@ input, select, textarea {
   border: 1px solid var(--hairline);
 }
 .week-strip-dot[data-trained='true'] {
-  background: var(--state-strong);
+  background: color-mix(in srgb, var(--text) 85%, var(--bg-card));
   border-color: transparent;
-  box-shadow: 0 2px 8px -3px var(--state-strong);
 }
 .week-strip-dot[data-today='true'] {
   outline: 2px solid var(--accent);
@@ -643,7 +659,7 @@ input, select, textarea {
   border: 1px solid var(--hairline);
 }
 .pip[data-filled='true'] {
-  background: var(--state-rest);
+  background: color-mix(in srgb, var(--text) 85%, var(--bg-card));
   border-color: transparent;
 }
 
@@ -769,7 +785,7 @@ button.heatmap-cell { cursor: pointer; }
   .bottom-nav { background: var(--surface-2); }
   .sheet, .reward-card { background: var(--surface-2); }
   .btn-primary, .fab, .nav-item[data-active='true'] { background: var(--accent); }
-  .overlay-backdrop { background: rgba(4, 7, 16, 0.85); }
+  .overlay-backdrop { background: var(--scrim); }
 }
 
 /* Users who prefer less transparency → solid fills, no blur. */
@@ -787,7 +803,7 @@ button.heatmap-cell { cursor: pointer; }
   .bottom-nav { background: var(--surface-2); }
   .sheet, .reward-card { background: var(--surface-2); }
   .btn-primary, .fab, .nav-item[data-active='true'] { background: var(--accent); }
-  .overlay-backdrop { background: rgba(4, 7, 16, 0.9); }
+  .overlay-backdrop { background: var(--scrim); }
 }
 
 /* Higher contrast → solid + strong borders. */

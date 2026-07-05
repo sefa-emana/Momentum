@@ -2,26 +2,27 @@
  * On-device share cards — 1080×1920 (9:16) PNGs rendered directly on an
  * offscreen canvas. No external assets, no network, no server: everything is
  * drawn by hand and shared via the Web Share API (with a download fallback), so
- * it is fully privacy-preserving. Brand palette mirrors the app's dark tokens.
+ * it is fully privacy-preserving. Brand palette mirrors the app's LIGHT tokens
+ * (premium-minimal: clean white card, single warm-orange accent).
  */
 
 const W = 1080
 const H = 1920
 
-// Brand palette (from src/ui/theme.css — dark tokens).
+// Brand palette (from src/ui/theme.css — light tokens).
 const COLORS = {
-  bg0: '#0a0e1a',
-  bg1: '#131a30',
-  bg2: '#1a2234',
-  text: '#f4f6fb',
-  dim: '#a7b0c4',
-  faint: '#5e6a82',
+  bg0: '#ffffff',
+  bg1: '#ffffff',
+  bg2: '#f7f7f9',
+  text: '#17171a',
+  dim: '#6e7076',
+  faint: '#a6a8af',
   accent: '#ff6b3d',
   accentHot: '#ff3d6e',
-  xp: '#a78bfa',
-  green: '#3ddc97',
+  xp: '#3a3a3c',
+  green: '#34c759',
   blue: '#5b8def',
-  ring: '#232d42',
+  ring: '#ececef',
 }
 
 const FONT_FAMILY = 'Space Grotesk Variable'
@@ -52,18 +53,18 @@ function makeCanvas(): HTMLCanvasElement {
   return canvas
 }
 
-/** Shared backdrop: navy vertical gradient + a warm radial glow up top. */
+/** Shared backdrop: clean white canvas + a very soft warm radial glow up top. */
 function paintBackdrop(ctx: CanvasRenderingContext2D, glow: string): void {
   const bg = ctx.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, COLORS.bg1)
-  bg.addColorStop(0.55, COLORS.bg0)
-  bg.addColorStop(1, COLORS.bg0)
+  bg.addColorStop(0, COLORS.bg0)
+  bg.addColorStop(0.6, COLORS.bg0)
+  bg.addColorStop(1, COLORS.bg2)
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
 
-  const glowGrad = ctx.createRadialGradient(W / 2, 380, 40, W / 2, 380, 720)
+  const glowGrad = ctx.createRadialGradient(W / 2, 360, 40, W / 2, 360, 760)
   glowGrad.addColorStop(0, glow)
-  glowGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  glowGrad.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = glowGrad
   ctx.fillRect(0, 0, W, H)
 }
@@ -257,7 +258,7 @@ export async function renderWeeklyRecapCard(data: WeeklyRecapData): Promise<Blob
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2D canvas context unavailable')
 
-  paintBackdrop(ctx, 'rgba(255,107,61,0.28)')
+  paintBackdrop(ctx, 'rgba(255,107,61,0.1)')
   paintWordmark(ctx, font)
 
   ctx.save()
@@ -276,7 +277,7 @@ export async function renderWeeklyRecapCard(data: WeeklyRecapData): Promise<Blob
 
   const row = 1300
   paintStat(ctx, W / 2 - 320, row, String(data.sessions), 'Einheiten', COLORS.accent, font)
-  paintStat(ctx, W / 2, row, String(data.whoPoints), 'WHO-Punkte', COLORS.blue, font)
+  paintStat(ctx, W / 2, row, String(data.whoPoints), 'WHO-Punkte', COLORS.text, font)
   paintStat(ctx, W / 2 + 320, row, String(data.streak), 'Streak', COLORS.green, font)
 
   ctx.textAlign = 'center'
@@ -299,7 +300,7 @@ export async function renderAchievementCard(data: AchievementCardData): Promise<
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2D canvas context unavailable')
 
-  paintBackdrop(ctx, 'rgba(255,61,110,0.30)')
+  paintBackdrop(ctx, 'rgba(255,61,110,0.1)')
   paintWordmark(ctx, font)
 
   ctx.textAlign = 'center'

@@ -36,8 +36,8 @@ export function MiniBarChart({ data }: { data: DaySeriesPoint[] }) {
         })}
         <defs>
           <linearGradient id="bar-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" />
-            <stop offset="100%" stopColor="#7c5cff" />
+            <stop offset="0%" stopColor="var(--xp-2)" />
+            <stop offset="100%" stopColor="var(--xp)" />
           </linearGradient>
         </defs>
       </svg>

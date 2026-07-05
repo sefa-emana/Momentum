@@ -229,7 +229,7 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
                 className="bar-fill"
                 style={{
                   width: `${whoPct * 100}%`,
-                  background: whoMet ? 'var(--state-strong)' : 'var(--state-rest)',
+                  background: whoMet ? 'var(--state-strong)' : 'var(--xp-grad)',
                 }}
               />
             </div>

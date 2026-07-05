@@ -18,8 +18,8 @@ export default defineConfig({
         short_name: 'Momentum',
         description:
           'Evidenzbasierter, gamifizierter Sport-Tracker: sammle XP, halte deine Streak und bewahre dein Momentum.',
-        theme_color: '#0b1020',
-        background_color: '#0b1020',
+        theme_color: '#f7f7f9',
+        background_color: '#f7f7f9',
         display: 'standalone',
         orientation: 'portrait',
         start_url: base,
