@@ -159,6 +159,9 @@ interface StoreActions {
    *  (XP, momentum, PRs, achievements) recomputes consistently. The edited
    *  workout keeps its original `backfilled` flag. */
   updateWorkout: (id: string, patch: WorkoutPatch) => void
+  /** Re-insert a previously deleted workout (undo), then replay so all derived
+   *  state recomputes consistently. Idempotent if the id already exists. */
+  restoreWorkout: (workout: Workout) => void
   /** Add a user-defined custom exercise (id validated + prefixed 'custom-'). */
   addCustomExercise: (def: ExerciseDef) => void
   setWeeklyGoal: (n: number) => void
@@ -543,6 +546,15 @@ export const useStore = create<Store>()(
             w.id === id ? { ...w, ...patch, id: w.id, backfilled: w.backfilled } : w,
           )
           return rebuildFromWorkouts(s, updated)
+        })
+      },
+
+      restoreWorkout: (workout) => {
+        set((s) => {
+          if (s.workouts.some((w) => w.id === workout.id)) return {}
+          // Replay so bonus XP / achievements recompute; the restored workout's
+          // stored xp is recomputed by the replay exactly like a fresh log.
+          return rebuildFromWorkouts(s, [...s.workouts, workout])
         })
       },
 

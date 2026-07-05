@@ -70,18 +70,15 @@ export default function App() {
 
       <BottomNav tab={tab} onChange={setTab} />
 
-      <AnimatePresence>
-        {logOpen && (
-          <LogWorkoutSheet
-            key="log-sheet"
-            onClose={() => setLogOpen(false)}
-            onLogged={(r, moodAfter) => {
-              setLogOpen(false)
-              setReward({ reward: r, moodAfter })
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {logOpen && (
+        <LogWorkoutSheet
+          onClose={() => setLogOpen(false)}
+          onLogged={(r, moodAfter) => {
+            setLogOpen(false)
+            setReward({ reward: r, moodAfter })
+          }}
+        />
+      )}
 
       <AnimatePresence>
         {reward && (

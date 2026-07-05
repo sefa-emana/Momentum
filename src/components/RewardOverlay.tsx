@@ -1,7 +1,18 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
-import { Check, Flame, Heart, Share2, Sparkles, Star, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { Check, Flame, Heart, Share2, Sparkles, Star, Swords, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
 import type { WorkoutReward } from '../state/store'
+import { useStore } from '../state/store'
+import {
+  E1RM_PR_XP,
+  GHOST_BEAT_XP,
+  REP_PR_XP,
+  VOLUME_PR_XP,
+  WEIGHT_PR_XP,
+  resolveExercise,
+  type PRKind,
+} from '../domain'
+import { PR_KIND_LABEL } from '../ui/exerciseMeta'
 import { achievementIcon, ICON_STROKE } from '../ui/icons'
 import { Ticker } from '../ui/Ticker'
 import { Confetti } from '../ui/Confetti'
@@ -52,10 +63,24 @@ export function RewardOverlay({
       /* sharing failed / cancelled — nothing to do */
     }
   }
+  const customExercises = useStore((s) => s.customExercises)
   const celebrate =
     reward.leveledUp ||
     reward.newAchievements.length > 0 ||
-    reward.questsCompleted.length > 0
+    reward.questsCompleted.length > 0 ||
+    reward.prEvents.length > 0
+
+  const prXpFor = (k: PRKind): number =>
+    k === 'e1rm' ? E1RM_PR_XP : k === 'weight' ? WEIGHT_PR_XP : k === 'rep' ? REP_PR_XP : VOLUME_PR_XP
+
+  const exName = (id: string): string => resolveExercise(id, customExercises)?.name ?? id
+
+  // Flatten PR events to one pill per (exercise, kind), e1RM first (leads).
+  const prPills = reward.prEvents.flatMap((p) =>
+    [...p.kinds]
+      .sort((a, b) => prXpFor(b) - prXpFor(a))
+      .map((k) => ({ key: `${p.exerciseId}-${k}`, kind: k, name: exName(p.exerciseId) })),
+  )
 
   return (
     <motion.div
@@ -162,6 +187,40 @@ export function RewardOverlay({
                 <Sparkles size={14} strokeWidth={ICON_STROKE} aria-hidden />
                 Überraschung! +{reward.surpriseXp} XP
               </span>
+            )}
+          </div>
+        )}
+
+        {(prPills.length > 0 || reward.ghostBeaten.length > 0) && (
+          <div className="stack" style={{ gap: 8, marginTop: 12 }}>
+            {prPills.length > 0 && (
+              <div className="row" style={{ justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {prPills.map((p) => (
+                  <span
+                    key={p.key}
+                    className="pill"
+                    data-testid="pr-pill"
+                    style={{ borderColor: 'var(--accent-hot)', color: 'var(--accent-hot)' }}
+                  >
+                    <Trophy size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                    {PR_KIND_LABEL[p.kind]}: {p.name} +{prXpFor(p.kind)} XP
+                  </span>
+                ))}
+              </div>
+            )}
+            {reward.ghostBeaten.length > 0 && (
+              <div className="row" style={{ justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {reward.ghostBeaten.map((id) => (
+                  <span
+                    key={id}
+                    className="pill"
+                    style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                  >
+                    <Swords size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                    Letztes Mal geschlagen: {exName(id)} +{GHOST_BEAT_XP} XP
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         )}

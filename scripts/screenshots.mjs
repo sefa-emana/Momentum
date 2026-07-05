@@ -31,7 +31,7 @@ const PORT = 4188
 const BASE = '/Momentum/'
 const URL = `http://localhost:${PORT}${BASE}`
 const STORAGE_KEY = 'momentum-state-v1'
-const STATE_VERSION = 3
+const STATE_VERSION = 4
 
 // ---------------------------------------------------------------------------
 // 1. Bundle the real domain + store engine so we can build a faithful state.
@@ -137,6 +137,37 @@ function generateWorkouts(now, weekStartMs) {
   if (!out.some((wk) => wk.date.slice(0, 10) === iso(now).slice(0, 10))) {
     push(now - 3 * 3600_000, 'cardio', 40, 'moderate', { feel: 5 })
   }
+
+  // Progression Engine v2: two prior strength sessions WITH per-set entries so
+  // the log sheet shows ghost values + an "addWeight" progression hint, and the
+  // history/edit sheet render real set summaries. Both sessions hit the top of
+  // the rep band at the same load → the 2×2 rule fires (+2,5 kg).
+  const strengthEntries = () => [
+    {
+      exerciseId: 'bench-press',
+      sets: [
+        { weightKg: 60, reps: 8, kind: 'normal' },
+        { weightKg: 60, reps: 8, kind: 'normal' },
+        { weightKg: 60, reps: 8, kind: 'normal' },
+      ],
+    },
+    {
+      exerciseId: 'barbell-row',
+      sets: [
+        { weightKg: 50, reps: 10, kind: 'normal' },
+        { weightKg: 50, reps: 10, kind: 'normal' },
+        { weightKg: 50, reps: 10, kind: 'normal' },
+      ],
+    },
+  ]
+  push(now - 11 * DAY + 18 * 3600_000, 'strength', 55, 'vigorous', {
+    feel: 7,
+    entries: strengthEntries(),
+  })
+  push(now - 4 * DAY + 18 * 3600_000, 'strength', 55, 'vigorous', {
+    feel: 7,
+    entries: strengthEntries(),
+  })
 
   return out.sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
 }
@@ -313,6 +344,31 @@ async function main() {
     await page.getByRole('dialog', { name: 'Training loggen' }).waitFor({ timeout: 10_000 })
     await page.waitForTimeout(500)
     await shoot(page, '05-log-sheet')
+
+    // 07 — Satz-Modus: add an exercise (ghost values + progression hint).
+    await page.getByTestId('add-exercise').click()
+    await page.getByRole('dialog', { name: 'Übung wählen' }).waitFor({ timeout: 10_000 })
+    await page.getByRole('button', { name: /^Bankdrücken/ }).first().click()
+    await page
+      .getByTestId('progress-hint')
+      .first()
+      .waitFor({ timeout: 10_000 })
+      .catch(() => {})
+    await page.waitForTimeout(500)
+    await shoot(page, '07-log-satzmodus')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+
+    // 08 — Edit a logged strength session WITH set entries (sets shown, editable).
+    await openTab(page, 'Verlauf')
+    await page
+      .getByRole('button', { name: 'Kraft bearbeiten' })
+      .filter({ hasText: 'Bankdrücken' })
+      .first()
+      .click()
+    await page.getByRole('dialog', { name: 'Einheit bearbeiten' }).waitFor({ timeout: 10_000 })
+    await page.waitForTimeout(500)
+    await shoot(page, '08-edit-workout')
     await light.close()
 
     // ---- Dark theme: the de-blued graphite secondary option. ----

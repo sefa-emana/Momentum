@@ -475,6 +475,24 @@ input, select, textarea {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  animation: backdrop-in 0.2s ease;
+}
+/* Outer wrapper owns the slide-in (CSS); the inner .sheet owns the drag. */
+.sheet-outer {
+  width: 100%;
+  max-width: var(--maxw);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  animation: sheet-in 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 .sheet {
   width: 100%;
@@ -488,16 +506,31 @@ input, select, textarea {
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
     0 -20px 60px -20px rgba(0, 0, 0, 0.5);
-  padding: 10px 18px calc(var(--safe-bottom) + 22px);
   max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Dedicated drag region — handle + header. Body scrolls independently. */
+.sheet-drag {
+  flex: none;
+  padding: 6px 18px 4px;
+  cursor: grab;
+  user-select: none;
+}
+.sheet-drag:active { cursor: grabbing; }
+.sheet-body {
+  flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 18px calc(var(--safe-bottom) + 22px);
 }
 .sheet-handle {
   width: 42px;
   height: 5px;
   border-radius: 999px;
   background: var(--glass-border);
-  margin: 8px auto 14px;
+  margin: 6px auto 10px;
 }
 
 .field-label {
@@ -760,6 +793,279 @@ button.heatmap-cell { cursor: pointer; }
   color: var(--state-rest);
   background: color-mix(in srgb, var(--state-rest) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--state-rest) 32%, transparent);
+}
+
+/* ===========================================================================
+   Satz-Modus — set-based logging (Progression Engine v2 UI)
+   =========================================================================== */
+
+/* Sticky rest-timer bar at the top of the sheet body. */
+.rest-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 18px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px -10px var(--accent-glow);
+}
+.rest-bar-time { font-size: 18px; letter-spacing: -0.01em; }
+.rest-bar-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  overflow: hidden;
+}
+.rest-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 1s linear;
+}
+.rest-bar-btn {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  white-space: nowrap;
+}
+
+/* Progression hint chip — calm, accent-tinted. */
+.progress-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.progress-hint[data-tone='hold'] {
+  background: color-mix(in srgb, var(--state-rest) 12%, transparent);
+  border-color: color-mix(in srgb, var(--state-rest) 26%, transparent);
+}
+.progress-hint-icon { color: var(--accent); flex: none; margin-top: 1px; }
+.progress-hint[data-tone='hold'] .progress-hint-icon { color: var(--state-rest); }
+.progress-hint-title { font-weight: 700; font-size: 14px; }
+.progress-hint-reason { color: var(--text-dim); font-size: 12px; line-height: 1.35; margin-top: 2px; }
+
+/* Exercise block within the log/edit sheet. */
+.exercise-block {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--card-specular), var(--card-shadow);
+}
+.exercise-block + .exercise-block { margin-top: 12px; }
+
+/* One set row: index · weight · reps · confirm. */
+.set-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.set-row + .set-row { border-top: 1px solid var(--hairline); }
+.set-index {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.set-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 7px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.set-cell:active { transform: scale(0.97); }
+.set-cell[data-active='true'] { border-color: var(--accent); }
+.set-cell-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.set-cell-unit { font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; }
+.set-row[data-ghost='true'] .set-cell-value { color: var(--text-faint); }
+.set-confirm {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  color: var(--text-faint);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+.set-confirm:active { transform: scale(0.92); }
+.set-confirm[data-done='true'] {
+  background: color-mix(in srgb, var(--state-strong) 16%, transparent);
+  border-color: transparent;
+  color: var(--state-strong);
+}
+
+/* Warmup chip toggle (small 'A' → Aufwärmsatz). */
+.warmup-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface-3);
+  color: var(--text-faint);
+  border: 1px solid var(--hairline);
+}
+.warmup-chip[data-on='true'] {
+  background: color-mix(in srgb, var(--state-steady) 18%, transparent);
+  color: var(--state-steady);
+  border-color: transparent;
+}
+
+/* Inline stepper (compact ± editor). */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--control-border);
+}
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  color: var(--text);
+  font-weight: 700;
+}
+.stepper-btn:active { transform: scale(0.92); }
+.stepper-value {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stepper-label { font-size: 11px; color: var(--text-faint); text-align: center; }
+
+/* Plate breakdown line inside a weight stepper. */
+.plate-line {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px dashed var(--control-border);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.plate-line strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Exercise picker. */
+.picker-search {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  margin-bottom: 12px;
+}
+.picker-search:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.picker-group-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin: 14px 0 8px;
+}
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  box-shadow: var(--card-specular), var(--card-shadow);
+  margin-bottom: 6px;
+}
+.picker-item:active { transform: scale(0.99); }
+.picker-item-name { font-weight: 600; }
+.picker-item-meta { font-size: 12px; color: var(--text-faint); margin-top: 1px; }
+
+/* Undo snackbar. */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 92px);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  max-width: calc(var(--maxw) - 36px);
+  width: calc(100% - 36px);
+}
+.snackbar-action {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Backfill note. */
+.backfill-note {
+  font-size: 12.5px;
+  color: var(--state-steady);
+  background: color-mix(in srgb, var(--state-steady) 12%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 8px 11px;
+  line-height: 1.35;
+}
+
+/* History entry summary line (sets). */
+.entry-summary {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @keyframes fade-in {

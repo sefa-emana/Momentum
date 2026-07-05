@@ -29,7 +29,7 @@ test.describe('Logging workouts', () => {
 
     const reward = page.getByRole('dialog', { name: 'Belohnung' })
     await expect(reward).toBeVisible()
-    await expect(reward.getByText(/\+\d+ XP/)).toBeVisible()
+    await expect(reward.locator('.hero-number')).toContainText('XP')
     await expect(reward.getByText('Erster Schritt')).toBeVisible()
 
     await reward.getByRole('button', { name: 'Weiter' }).click()
@@ -219,6 +219,104 @@ test.describe('Wave 3 — endgame', () => {
     await accept.click()
 
     await expect(page.getByText('Angenommen').first()).toBeVisible()
+  })
+})
+
+test.describe('Logging-UX v2 — Satz-Modus & editing', () => {
+  test('logs a strength session via Satz-Modus and shows it in history', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    await expect(page.getByRole('dialog', { name: 'Training loggen' })).toBeVisible()
+
+    // Strength defaults to Satz-Modus → add an exercise via the picker.
+    await page.getByTestId('add-exercise').click()
+    await expect(page.getByRole('dialog', { name: 'Übung wählen' })).toBeVisible()
+    await page.getByLabel('Übung suchen').fill('Bankdr')
+    await page.getByRole('button', { name: /^Bankdrücken/ }).first().click()
+
+    // Confirm two ghost/blank sets (one tap each), then save.
+    await page.getByRole('button', { name: 'Satz 1 bestätigen' }).click()
+    await page.getByRole('button', { name: 'Satz', exact: true }).click()
+    await page.getByRole('button', { name: 'Satz 2 bestätigen' }).click()
+
+    await page.getByTestId('submit-workout').click()
+    const reward = page.getByRole('dialog', { name: 'Belohnung' })
+    await expect(reward).toBeVisible()
+    await reward.getByRole('button', { name: 'Weiter' }).click()
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await expect(page.getByText(/Bankdrücken/)).toBeVisible()
+  })
+
+  test('the log sheet has a dedicated drag region and closes via Escape + backdrop', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'Training loggen' })
+    await expect(dialog).toBeVisible()
+
+    // Drag-to-dismiss uses a dedicated drag region (handle + header).
+    await expect(page.locator('.sheet-drag').first()).toBeVisible()
+
+    // Escape closes.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // Backdrop click closes too.
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    await expect(dialog).toBeVisible()
+    await page.locator('.overlay-backdrop').first().click({ position: { x: 8, y: 8 } })
+    await expect(dialog).toBeHidden()
+  })
+
+  test('editing a workout recomputes its XP in history', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page) // strength, 30 min
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    const pill = page.locator('.list-item .pill').first()
+    const before = Number((await pill.textContent())?.replace(/\D/g, ''))
+
+    await page.getByRole('button', { name: 'Kraft bearbeiten' }).click()
+    await expect(page.getByRole('dialog', { name: 'Einheit bearbeiten' })).toBeVisible()
+    await page.getByRole('button', { name: '90′' }).click()
+    await page.getByTestId('save-edit').click()
+    await expect(page.getByRole('dialog', { name: 'Einheit bearbeiten' })).toBeHidden()
+
+    await expect(page.locator('.list-item').first().getByText('90′')).toBeVisible()
+    const after = Number((await pill.textContent())?.replace(/\D/g, ''))
+    expect(after).toBeGreaterThan(before)
+  })
+
+  test('duplicating a workout prefills the log sheet and creates a second session', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await page.getByRole('button', { name: 'Kraft bearbeiten' }).click()
+    await page.getByRole('button', { name: 'Duplizieren' }).click()
+
+    // Prefilled log sheet opens; save it.
+    await expect(page.getByRole('dialog', { name: 'Training loggen' })).toBeVisible()
+    await page.getByTestId('submit-workout').click()
+    const reward = page.getByRole('dialog', { name: 'Belohnung' })
+    await expect(reward).toBeVisible()
+    await reward.getByRole('button', { name: 'Weiter' }).click()
+
+    await page.getByRole('button', { name: 'Home' }).click()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
+  })
+
+  test('deleting from history offers an undo that restores the session', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await page.getByRole('button', { name: 'Einheit löschen' }).click()
+    await expect(page.getByText('Einheit gelöscht')).toBeVisible()
+    await page.getByRole('button', { name: 'Rückgängig' }).click()
+
+    await page.getByRole('button', { name: 'Home' }).click()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('1')
   })
 })
 

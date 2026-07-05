@@ -12,6 +12,8 @@ export * from './quests'
 export * from './stats'
 export * from './exercises'
 export * from './progression'
+export * from './ghosts'
+export * from './plates'
 
 export const WORKOUT_TYPE_META: Record<
   import('./types').WorkoutType,

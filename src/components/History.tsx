@@ -1,18 +1,54 @@
-import { useState } from 'react'
-import { Inbox, Trash2, X } from 'lucide-react'
-import { useStore } from '../state/store'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { Inbox, Pencil, Trash2, Undo2, X } from 'lucide-react'
+import { useStore, type WorkoutReward } from '../state/store'
 import { useNow } from '../ui/hooks'
 import { WORKOUT_TYPE_META, dayKey, type Workout } from '../domain'
 import { WORKOUT_TYPE_ICON, INTENSITY_ICON, ICON_STROKE } from '../ui/icons'
+import { summarizeEntries } from '../ui/entrySummary'
 import { Heatmap } from './Heatmap'
+import { EditWorkoutSheet } from './EditWorkoutSheet'
+import { LogWorkoutSheet } from './LogWorkoutSheet'
+import { RewardOverlay } from './RewardOverlay'
+import type { LogInitial } from './setDraft'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
+
+const UNDO_MS = 6000
 
 export function History() {
   const workouts = useStore((s) => s.workouts)
   const deleteWorkout = useStore((s) => s.deleteWorkout)
+  const restoreWorkout = useStore((s) => s.restoreWorkout)
+  const customExercises = useStore((s) => s.customExercises)
   const now = useNow()
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+
+  const [editing, setEditing] = useState<Workout | null>(null)
+  const [duplicate, setDuplicate] = useState<LogInitial | null>(null)
+  const [reward, setReward] = useState<
+    { reward: WorkoutReward; moodAfter?: 1 | 2 | 3 | 4 | 5 } | null
+  >(null)
+  const [undo, setUndo] = useState<Workout | null>(null)
+  const undoTimer = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (undoTimer.current) window.clearTimeout(undoTimer.current)
+  }, [])
+
+  const doDelete = (w: Workout) => {
+    setEditing(null)
+    deleteWorkout(w.id)
+    setUndo(w)
+    if (undoTimer.current) window.clearTimeout(undoTimer.current)
+    undoTimer.current = window.setTimeout(() => setUndo(null), UNDO_MS)
+  }
+
+  const doUndo = () => {
+    if (undo) restoreWorkout(undo)
+    setUndo(null)
+    if (undoTimer.current) window.clearTimeout(undoTimer.current)
+  }
 
   const sorted = [...workouts].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -83,36 +119,48 @@ export function History() {
                   const TypeIcon = WORKOUT_TYPE_ICON[w.type]
                   const intensity = INTENSITY_ICON[w.intensity]
                   const IntensityIcon = intensity.Icon
+                  const summary = summarizeEntries(w, customExercises)
+                  const label = WORKOUT_TYPE_META[w.type].label
                   return (
                     <div key={w.id} className="list-item">
-                      <span className="badge-icon" aria-hidden>
-                        <TypeIcon size={22} strokeWidth={ICON_STROKE} />
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="row" style={{ gap: 8 }}>
-                          <strong>{WORKOUT_TYPE_META[w.type].label}</strong>
-                          <span className="faint row" style={{ fontSize: 12, gap: 4 }}>
-                            <IntensityIcon size={13} strokeWidth={ICON_STROKE} style={{ color: intensity.color }} aria-hidden />
-                            {w.durationMin}′
-                          </span>
-                        </div>
-                        {w.note && (
-                          <div className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {w.note}
+                      <button
+                        className="row"
+                        aria-label={`${label} bearbeiten`}
+                        onClick={() => setEditing(w)}
+                        style={{ flex: 1, minWidth: 0, gap: 12, textAlign: 'left', background: 'none' }}
+                      >
+                        <span className="badge-icon" aria-hidden>
+                          <TypeIcon size={22} strokeWidth={ICON_STROKE} />
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="row" style={{ gap: 8 }}>
+                            <strong>{label}</strong>
+                            <span className="faint row" style={{ fontSize: 12, gap: 4 }}>
+                              <IntensityIcon size={13} strokeWidth={ICON_STROKE} style={{ color: intensity.color }} aria-hidden />
+                              {w.durationMin}′
+                            </span>
+                            <Pencil size={13} strokeWidth={ICON_STROKE} aria-hidden style={{ color: 'var(--text-faint)' }} />
                           </div>
-                        )}
-                        <div className="faint" style={{ fontSize: 11.5 }}>
-                          {format(new Date(w.date), 'HH:mm', { locale: de })} Uhr
+                          {summary ? (
+                            <div className="entry-summary">{summary}</div>
+                          ) : (
+                            w.note && (
+                              <div className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {w.note}
+                              </div>
+                            )
+                          )}
+                          <div className="faint" style={{ fontSize: 11.5 }}>
+                            {format(new Date(w.date), 'HH:mm', { locale: de })} Uhr
+                          </div>
                         </div>
-                      </div>
+                      </button>
                       <span className="pill" style={{ color: 'var(--xp)' }}>+{w.xpEarned}</span>
                       <button
                         aria-label="Einheit löschen"
                         className="btn-ghost"
                         style={{ display: 'inline-flex', padding: 6, color: 'var(--text-faint)' }}
-                        onClick={() => {
-                          if (confirm('Diese Einheit löschen?')) deleteWorkout(w.id)
-                        }}
+                        onClick={() => doDelete(w)}
                       >
                         <Trash2 size={18} strokeWidth={ICON_STROKE} aria-hidden />
                       </button>
@@ -122,6 +170,50 @@ export function History() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {editing && (
+        <EditWorkoutSheet
+          workout={editing}
+          onClose={() => setEditing(null)}
+          onDeleted={doDelete}
+          onDuplicate={(init) => {
+            setEditing(null)
+            setDuplicate(init)
+          }}
+        />
+      )}
+
+      {duplicate && (
+        <LogWorkoutSheet
+          initial={duplicate}
+          onClose={() => setDuplicate(null)}
+          onLogged={(r, moodAfter) => {
+            setDuplicate(null)
+            setReward({ reward: r, moodAfter })
+          }}
+        />
+      )}
+
+      <AnimatePresence>
+        {reward && (
+          <RewardOverlay
+            key="reward"
+            reward={reward.reward}
+            moodAfter={reward.moodAfter}
+            onClose={() => setReward(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {undo && (
+        <div className="snackbar" role="status">
+          <span style={{ flex: 1 }}>Einheit gelöscht</span>
+          <button className="snackbar-action" onClick={doUndo}>
+            <Undo2 size={16} strokeWidth={ICON_STROKE} aria-hidden style={{ verticalAlign: 'middle', marginRight: 4 }} />
+            Rückgängig
+          </button>
         </div>
       )}
     </div>

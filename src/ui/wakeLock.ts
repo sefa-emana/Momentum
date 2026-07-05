@@ -1,12 +1,9 @@
 /**
  * Screen Wake Lock helper — feature-detected, best-effort.
  *
- * TODO(future): not wired into any UI yet. Momentum has no in-app timer or
- * live-session screen that would need to keep the display awake. This is kept
- * as a small, tested-shape utility so that when a rest-timer / live-workout
- * feature lands it can hold a wake lock without re-deriving the feature
- * detection and re-acquire-on-visibility dance. Intentionally exported and
- * unused for now (documented dead code, not accidental).
+ * Used by the Satz-Modus rest timer (see `useRestTimer`): the lock is held while
+ * a rest countdown runs and re-acquired on visibilitychange (the browser
+ * auto-releases on tab hide). Silent no-op where the Wake Lock API is absent.
  */
 
 /** Minimal typings — Wake Lock is absent from some lib.dom.d.ts revisions. */
