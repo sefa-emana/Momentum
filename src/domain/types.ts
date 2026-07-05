@@ -6,6 +6,8 @@
  * stay pure and fully testable.
  */
 
+import type { ExerciseDef } from './exercises'
+
 export type WorkoutType =
   | 'strength'
   | 'cardio'
@@ -14,6 +16,33 @@ export type WorkoutType =
   | 'other'
 
 export type Intensity = 'light' | 'moderate' | 'vigorous'
+
+/**
+ * A single logged set (Progression Engine v2). All measure fields are optional
+ * so one shape covers strength (weight/reps/rir), cardio (duration/distance/rpe)
+ * and bodyweight (reps only). `kind` drives progression math: `warmup` sets are
+ * excluded from e1RM / PR / volume, `failure` sets count as working sets.
+ */
+export interface SetEntry {
+  /** External load in kg (strength). Absent for bodyweight/cardio. */
+  weightKg?: number
+  reps?: number
+  /** Reps-in-reserve (autoregulation signal; 0 ≈ to failure). */
+  rir?: number
+  /** Cardio duration in seconds. */
+  durationSec?: number
+  /** Cardio distance in metres. */
+  distanceM?: number
+  /** Cardio rate of perceived exertion (Borg CR10). */
+  rpe?: number
+  kind: 'normal' | 'warmup' | 'failure'
+}
+
+/** All sets logged for one exercise within a single workout. */
+export interface ExerciseEntry {
+  exerciseId: string
+  sets: SetEntry[]
+}
 
 export interface Workout {
   id: string
@@ -38,6 +67,15 @@ export interface Workout {
   /** Optional mood tap after the session (1–5). Affective response predicts
    *  adherence 6–12 months out (PMC2390920). */
   moodAfter?: 1 | 2 | 3 | 4 | 5
+  /** Optional per-exercise set log (Progression Engine v2). Absent on older
+   *  workouts, which stay 100% valid — the session-level fields above remain the
+   *  source for Foster sRPE/momentum; entries add progression intelligence. */
+  entries?: ExerciseEntry[]
+  /** True when the workout was logged with a past date (date < today−1). A
+   *  backfilled workout can SET progression baselines but never yields
+   *  celebration flags or bonus XP (anti-exploit). Preserved through replay and
+   *  edits (an edited workout keeps its original flag). */
+  backfilled?: boolean
 }
 
 /**
@@ -126,6 +164,9 @@ export interface AppState {
   questsDone: QuestRef[]
   unlocked: UnlockedAchievement[]
   settings: Settings
+  /** User-defined custom exercises (ids prefixed 'custom-'). Raw user data,
+   *  carried through replay like settings/pauses — not a derived accumulator. */
+  customExercises: ExerciseDef[]
   /** True once the user has finished onboarding. */
   onboarded: boolean
 }

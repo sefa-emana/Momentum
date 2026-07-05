@@ -136,6 +136,29 @@ export const PROGRESS_BONUS_XP = 40
  */
 export const SURPRISE_BONUS_XP = 25
 
+// ---------------------------------------------------------------------------
+// Progression Engine v2 — honest per-exercise XP (see docs/PSYCHOLOGY.md §11).
+// All of these are REPLAY-DERIVABLE (computed from the preserved per-set entries)
+// and ALL are gated by the overreach guard: when the load ratio is elevated they
+// collapse to 0 — real progress is only rewarded when recovery allows it
+// (Refalo 2022 / Ruple 2023). Backfilled (back-dated) workouts also earn none:
+// back-dating can seed baselines but must never farm bonus XP.
+// ---------------------------------------------------------------------------
+
+/** "Schlag dein letztes Mal": XP when an exercise's best working set beats its
+ *  own most recent session's best set. Granted at most once per exercise. */
+export const GHOST_BEAT_XP = 15
+
+/** Per-exercise PR XP by kind. e1RM is the honest strength signal, so it leads. */
+export const E1RM_PR_XP = 50
+export const WEIGHT_PR_XP = 25
+export const REP_PR_XP = 15
+export const VOLUME_PR_XP = 15
+
+/** Cap on total PR XP awarded in a single workout — keeps a big multi-lift day
+ *  from runaway inflation (the S-curve leitplanke). */
+export const PR_XP_CAP = 100
+
 /** Load ratio above which we consider the acute:chronic balance elevated —
  *  used both to gate bonuses and to surface a gentle plain-language nudge. The
  *  raw ratio (ACWR) is deliberately never shown: its predictive evidence is

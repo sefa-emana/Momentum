@@ -16,10 +16,21 @@ import {
   LOAD_RATIO_ELEVATED,
   SURPRISE_BONUS_XP,
   WEEKLY_GOAL_BONUS_XP,
+  GHOST_BEAT_XP,
+  E1RM_PR_XP,
+  WEIGHT_PR_XP,
+  REP_PR_XP,
+  VOLUME_PR_XP,
+  PR_XP_CAP,
   WORKOUT_TYPES,
   computeMomentumDetail,
   countComebacks,
   dayKey,
+  daysBetween,
+  detectPRs,
+  ghostBeats,
+  egoLiftExercises,
+  EXERCISE_MAP,
   levelFromXp,
   loadRatio,
   loadTrend,
@@ -42,15 +53,18 @@ import {
   type AchievementDef,
   type AcceptedQuest,
   type AppState,
+  type ExerciseDef,
+  type ExerciseEntry,
   type Intensity,
   type Pause,
+  type PRKind,
   type QuestDef,
   type Workout,
   type WorkoutType,
 } from '../domain'
 
 export const STORAGE_KEY = 'momentum-state-v1'
-const STATE_VERSION = 3
+const STATE_VERSION = 4
 
 export interface LogWorkoutInput {
   type: WorkoutType
@@ -65,11 +79,34 @@ export interface LogWorkoutInput {
   prBeaten?: boolean
   moodBefore?: 1 | 2 | 3 | 4 | 5
   moodAfter?: 1 | 2 | 3 | 4 | 5
+  /** Optional per-exercise set log (Progression Engine v2). */
+  entries?: ExerciseEntry[]
+  /** True when this is a back-dated session (date < today−1). Derived by the
+   *  live `logWorkout` action and preserved through replay — a stored fact, so
+   *  the reducer stays pure. Backfilled sessions earn no ghost/PR bonus XP. */
+  backfilled?: boolean
   /** Preserve an existing workout id (used by the replay in
    *  rebuildFromWorkouts so id-keyed rewards like the surprise bonus stay
    *  deterministic). Live logging omits it and a fresh id is minted. */
   id?: string
 }
+
+/** The fields of a workout that editing may change (`updateWorkout`). */
+export type WorkoutPatch = Partial<
+  Pick<
+    Workout,
+    | 'type'
+    | 'durationMin'
+    | 'intensity'
+    | 'note'
+    | 'date'
+    | 'feel'
+    | 'prBeaten'
+    | 'moodBefore'
+    | 'moodAfter'
+    | 'entries'
+  >
+>
 
 /** Rich result describing everything that changed — drives the reward UI. */
 export interface WorkoutReward {
@@ -103,6 +140,14 @@ export interface WorkoutReward {
   questBonusXp: number
   /** Ethical surprise bonus for this workout (0 or SURPRISE_BONUS_XP). */
   surpriseXp: number
+  /** Progression Engine v2: personal records detected this session (per
+   *  exercise). Empty for backfilled sessions or when no entries were logged.
+   *  When entries exist these REPLACE the manual `prBeaten` flag's role. */
+  prEvents: { exerciseId: string; kinds: PRKind[] }[]
+  /** Exercise ids that beat their own last session ("Schlag dein letztes Mal"). */
+  ghostBeaten: string[]
+  /** Total ghost-beat + PR bonus XP awarded this session (0 on overreach/backfill). */
+  setBonusXp: number
   newAchievements: AchievementDef[]
   bonusXp: number
 }
@@ -110,6 +155,12 @@ export interface WorkoutReward {
 interface StoreActions {
   logWorkout: (input: LogWorkoutInput) => WorkoutReward
   deleteWorkout: (id: string) => void
+  /** Edit a workout: merge the patch, then replay so every derived value
+   *  (XP, momentum, PRs, achievements) recomputes consistently. The edited
+   *  workout keeps its original `backfilled` flag. */
+  updateWorkout: (id: string, patch: WorkoutPatch) => void
+  /** Add a user-defined custom exercise (id validated + prefixed 'custom-'). */
+  addCustomExercise: (def: ExerciseDef) => void
   setWeeklyGoal: (n: number) => void
   setName: (name: string) => void
   setReducedMotion: (v: boolean) => void
@@ -152,6 +203,7 @@ export function initialState(): AppState {
     acceptedQuests: [],
     questsDone: [],
     unlocked: [],
+    customExercises: [],
     onboarded: false,
     settings: {
       name: '',
@@ -164,8 +216,10 @@ export function initialState(): AppState {
 /**
  * Persist migration up to the current STATE_VERSION. Cumulative and defensive:
  * v1 → v2 added the forgiveness-layer fields (`progressWeeks`, `pauses`);
- * v2 → v3 adds the endgame quest fields (`acceptedQuests`, `questsDone`). Any
- * key missing from an older persisted state is filled from `initialState()`.
+ * v2 → v3 added the endgame quest fields (`acceptedQuests`, `questsDone`);
+ * v3 → v4 adds Progression Engine v2 (`customExercises`; workouts gain optional
+ * `entries`/`backfilled`, which need no backfill as they are optional). Any key
+ * missing from an older persisted state is filled from `initialState()`.
  * Exported so it can be unit-tested directly.
  */
 export function migratePersisted(persisted: unknown, _version: number): AppState {
@@ -177,6 +231,7 @@ export function migratePersisted(persisted: unknown, _version: number): AppState
     pauses: s.pauses ?? [],
     acceptedQuests: s.acceptedQuests ?? [],
     questsDone: s.questsDone ?? [],
+    customExercises: s.customExercises ?? [],
     version: STATE_VERSION,
   }
 }
@@ -221,6 +276,8 @@ export function reduceLogWorkout(
     prBeaten: input.prBeaten || undefined,
     moodBefore: input.moodBefore,
     moodAfter: input.moodAfter,
+    entries: input.entries,
+    backfilled: input.backfilled || undefined,
   }
 
   const workouts = [...state.workouts, workout]
@@ -229,6 +286,39 @@ export function reduceLogWorkout(
 
   // --- Safety rail: overreaching is never rewarded (Thema 1). --------------
   const overreach = overreachStatus(workouts, at) === 'elevated'
+
+  // --- Progression Engine v2: honest per-exercise XP. ----------------------
+  // Ghost-beat + PR bonuses, all derived from the preserved set entries so they
+  // replay bit-for-bit. Zeroed on overreach OR for a backfilled (back-dated)
+  // session — both must never yield celebration flags or bonus XP (anti-exploit).
+  const custom = state.customExercises ?? []
+  let prEvents: { exerciseId: string; kinds: PRKind[] }[] = []
+  let ghostBeaten: string[] = []
+  let setBonusXp = 0
+  if (workout.entries && workout.entries.length > 0 && !workout.backfilled && !overreach) {
+    // Ego-lifts (weight jump > 2× increment) earn no bonus and no celebration.
+    const egoLifts = egoLiftExercises(state.workouts, workout, custom)
+    ghostBeaten = ghostBeats(state.workouts, workout).filter((id) => !egoLifts.has(id))
+    const ghostXp = ghostBeaten.length * GHOST_BEAT_XP
+
+    prEvents = detectPRs(state.workouts, workout, custom).filter(
+      (p) => !egoLifts.has(p.exerciseId),
+    )
+    let prXp = 0
+    for (const p of prEvents) {
+      for (const k of p.kinds) {
+        prXp +=
+          k === 'e1rm'
+            ? E1RM_PR_XP
+            : k === 'weight'
+              ? WEIGHT_PR_XP
+              : k === 'rep'
+                ? REP_PR_XP
+                : VOLUME_PR_XP
+      }
+    }
+    setBonusXp = ghostXp + Math.min(prXp, PR_XP_CAP)
+  }
 
   // --- PR bonus: an honest self-marked record, only while load is calm. ----
   const prBonusXp = input.prBeaten && !overreach ? PR_BONUS_XP : 0
@@ -277,7 +367,7 @@ export function reduceLogWorkout(
   const surpriseXp = surpriseBonusFor(workout.id) ? SURPRISE_BONUS_XP : 0
 
   const preAchievementBonus =
-    goalBonusXp + prBonusXp + progressBonusXp + questBonusXp + surpriseXp
+    goalBonusXp + prBonusXp + progressBonusXp + questBonusXp + surpriseXp + setBonusXp
 
   // Achievements — evaluate against the fresh derived context.
   const totalXpMid = sumWorkoutXp(workouts) + state.bonusXp + preAchievementBonus
@@ -345,6 +435,9 @@ export function reduceLogWorkout(
     questsCompleted,
     questBonusXp,
     surpriseXp,
+    prEvents,
+    ghostBeaten,
+    setBonusXp,
     newAchievements: fresh,
     bonusXp: preAchievementBonus + achievementBonus,
   }
@@ -362,16 +455,22 @@ export function reduceLogWorkout(
 export function rebuildFromWorkouts(
   prev: Pick<
     AppState,
-    'createdAt' | 'onboarded' | 'settings' | 'version' | 'pauses' | 'acceptedQuests'
+    | 'createdAt'
+    | 'onboarded'
+    | 'settings'
+    | 'version'
+    | 'pauses'
+    | 'acceptedQuests'
+    | 'customExercises'
   >,
   workouts: Workout[],
 ): AppState {
   const sorted = [...workouts].sort((a, b) => toEpoch(a.date) - toEpoch(b.date))
 
-  // Pauses and accepted quests are raw user facts, not derived accumulators —
-  // carry them through so the replay computes momentum/streaks/quests against
-  // the same inputs. Everything else (bonusXp, goalMetWeeks, progressWeeks,
-  // questsDone, unlocked) rebuilds via replay.
+  // Pauses, accepted quests and custom exercises are raw user facts, not derived
+  // accumulators — carry them through so the replay computes momentum/streaks/
+  // quests/PRs against the same inputs. Everything else (bonusXp, goalMetWeeks,
+  // progressWeeks, questsDone, unlocked) rebuilds via replay.
   let base: AppState = {
     ...initialState(),
     version: prev.version,
@@ -380,12 +479,14 @@ export function rebuildFromWorkouts(
     settings: prev.settings,
     pauses: prev.pauses,
     acceptedQuests: prev.acceptedQuests,
+    customExercises: prev.customExercises ?? [],
   }
 
   for (const w of sorted) {
     // Pass every persisted field through — id (so id-keyed rewards like the
-    // surprise bonus stay deterministic) and feel/prBeaten/mood (so load and
-    // PR-based derivations replay identically).
+    // surprise bonus stay deterministic), feel/prBeaten/mood (so load and
+    // PR-based derivations replay identically) and entries/backfilled (so the
+    // Progression Engine v2 XP replays and edited workouts keep their flag).
     base = reduceLogWorkout(base, {
       id: w.id,
       type: w.type,
@@ -397,6 +498,8 @@ export function rebuildFromWorkouts(
       prBeaten: w.prBeaten,
       moodBefore: w.moodBefore,
       moodAfter: w.moodAfter,
+      entries: w.entries,
+      backfilled: w.backfilled,
     }).next
   }
 
@@ -409,7 +512,13 @@ export const useStore = create<Store>()(
       ...initialState(),
 
       logWorkout: (input) => {
-        const { next, reward } = reduceLogWorkout(get(), input)
+        // Derive `backfilled` from the real clock: a NEW session dated before
+        // yesterday is a back-fill. Computed here (not in the pure reducer) and
+        // then stored, so replay reads it as a fact and stays deterministic.
+        const backfilled =
+          input.backfilled ??
+          (input.date ? daysBetween(input.date, nowIso()) > 1 : false)
+        const { next, reward } = reduceLogWorkout(get(), { ...input, backfilled })
         set(next)
         return reward
       },
@@ -421,6 +530,31 @@ export const useStore = create<Store>()(
           // consistent with the reduced history (they are non-invertible
           // accumulators otherwise).
           return rebuildFromWorkouts(s, remaining)
+        })
+      },
+
+      updateWorkout: (id, patch) => {
+        set((s) => {
+          const idx = s.workouts.findIndex((w) => w.id === id)
+          if (idx === -1) return {}
+          const updated = s.workouts.map((w) =>
+            // Keep the original id and `backfilled` flag; everything else is
+            // patchable, then a full replay recomputes all derived state.
+            w.id === id ? { ...w, ...patch, id: w.id, backfilled: w.backfilled } : w,
+          )
+          return rebuildFromWorkouts(s, updated)
+        })
+      },
+
+      addCustomExercise: (def) => {
+        set((s) => {
+          const id = def.id.startsWith('custom-') ? def.id : `custom-${def.id}`
+          // Reject id collisions against both built-ins and existing customs.
+          const clash =
+            EXERCISE_MAP[id] !== undefined ||
+            s.customExercises.some((e) => e.id === id)
+          if (clash) return {}
+          return { customExercises: [...s.customExercises, { ...def, id }] }
         })
       },
 
@@ -516,6 +650,7 @@ export const useStore = create<Store>()(
         acceptedQuests: s.acceptedQuests,
         questsDone: s.questsDone,
         unlocked: s.unlocked,
+        customExercises: s.customExercises,
         settings: s.settings,
         onboarded: s.onboarded,
       }),

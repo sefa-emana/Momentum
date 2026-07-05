@@ -86,6 +86,7 @@ export function Profile() {
       acceptedQuests: state.acceptedQuests,
       questsDone: state.questsDone,
       unlocked: state.unlocked,
+      customExercises: state.customExercises,
       settings: state.settings,
       onboarded: state.onboarded,
     }

@@ -10,6 +10,8 @@ export * from './achievements'
 export * from './mastery'
 export * from './quests'
 export * from './stats'
+export * from './exercises'
+export * from './progression'
 
 export const WORKOUT_TYPE_META: Record<
   import('./types').WorkoutType,

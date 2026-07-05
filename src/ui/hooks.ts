@@ -71,6 +71,7 @@ export function useDerived(): DerivedState {
   const acceptedQuests = useStore((s) => s.acceptedQuests)
   const questsDone = useStore((s) => s.questsDone)
   const unlocked = useStore((s) => s.unlocked)
+  const customExercises = useStore((s) => s.customExercises)
   const settings = useStore((s) => s.settings)
   const createdAt = useStore((s) => s.createdAt)
   const version = useStore((s) => s.version)
@@ -90,6 +91,7 @@ export function useDerived(): DerivedState {
           acceptedQuests,
           questsDone,
           unlocked,
+          customExercises,
           settings,
           onboarded,
         },
@@ -106,6 +108,7 @@ export function useDerived(): DerivedState {
       acceptedQuests,
       questsDone,
       unlocked,
+      customExercises,
       settings,
       onboarded,
       now,

@@ -189,6 +189,65 @@ hebt, bleibt eher dran.
   `moodAfter`, je 1–5). Rein optional, kein Zwang — das Delta macht die
   unmittelbare positive Emotion sichtbar (Fogg: „Klebstoff" der Gewohnheit).
 
+## 11. Progressive Overload v2: echter mechanischer Fortschritt
+
+**Prinzip.** Der Session-Last-Proxy (§8) belohnt Anwesenheit und Volumen ehrlich,
+aber ohne Übungsdaten kann er *mechanischen* Overload (mehr Gewicht/Wdh. an einer
+Übung) nur über den optionalen `prBeaten`-Tap erahnen. Progression Engine v2
+fügt eine **optionale** Satz/Wiederholungs-Ebene hinzu (`entries` je Workout) —
+die Session-Felder bleiben die Quelle für Foster-sRPE/Momentum, die Übungsebene
+legt Progressions-Intelligenz *obendrauf*. Alte Workouts ohne `entries` bleiben
+100 % gültig. Reine, replay-konsistente Funktionen leben in
+`src/domain/progression.ts`, die kuratierte Übungs-DB in `src/domain/exercises.ts`.
+
+- **Doppelte Progression (2-für-2-Regel, ACSM):** Erreichen *alle* Arbeitssätze
+  in **zwei** aufeinanderfolgenden Einheiten das obere Ende des Zielbereichs,
+  steigt das Gewicht um `incrementKg` (`progressionHint`). Danach `hold`, weil
+  die Wiederholungen erst wieder aufgebaut werden müssen. Load- und Rep-
+  Progression sind gleichwertig (Plotkin 2022) — 2-für-2 verbindet beide.
+- **Epley-e1RM nur für Wdh. ≤ 12:** Das geschätzte 1RM
+  (`weight × (1 + reps/30)`) ist nur im niedrigen Wiederholungsbereich valide;
+  darüber driften alle 1RM-Formeln stark. `e1rmForSet` gibt oberhalb von 12 Wdh.,
+  für Warm-ups und für Nicht-Gewichts-Übungen (Körpergewicht/Zeit/Distanz)
+  `null` zurück — dort zählen Wiederholungen/Volumen.
+- **Autoregulation über RIR (Reps in Reserve):** Ein bis null RIR (nahe
+  Muskelversagen) verschlechtert die Erholung (Ruple 2023); Training bis zum
+  Versagen ist für Hypertrophie unnötig (Refalo 2022). Die Stall-Erkennung
+  wertet daher fallendes RIR als Warnsignal, nicht als Erfolg.
+- **Stall-Erkennung + eskalierende Deload-Logik:** `stallState` unterscheidet
+  `progressing` / `watch` (e1RM 2 Einheiten flach) / `stalled` (3 Einheiten
+  flach/fallend *und* Wdh.-Ziele verfehlt oder RIR → 0). Bei `stalled` zykliert
+  `stallSuggestion` die Eskalation: Mini-Deload (~80 % nächste Einheit) →
+  Wiederholungsbereich wechseln → gleiche-Muster-Variation aus der DB.
+  Autoregulierter (nicht kalendarischer) Deload verbessert Ergebnisse
+  (2024-RCT; Systematik in PMC10948666).
+- **Wöchentliche harte Sätze je Muster (`weeklySetsByPattern`):** Arbeitssätze
+  (Warm-ups zählen nicht), fraktional (primär 1,0 / sekundär 0,5), mit *weichen*
+  Bändern: <4 „unter Wirkschwelle", 4–6 „Einstieg", 6–10 „produktive Zone",
+  10–20 „hohes Volumen", >20 „sehr hoch". Bewusst **Bänder statt harter
+  Vorgaben** — das 2025-Review zu Volumen-Landmarks (MEV/MAV/MRV) warnt vor
+  starrer Individual-Präskription (PMC10809978); mehr ist nicht linear besser.
+- **Cardio-Leiter (`cardioProgressionHint`):** Reihenfolge Häufigkeit (→ 3×/Wo.)
+  → Dauer (+10 %/Wo.-Deckel) → Intensität, plus Polarisierungs-Hinweis, wenn
+  < 70 % der jüngsten Cardio-Einheiten locker waren (das Gros soll leicht sein).
+- **Ehrliche XP-Integration (`GHOST_BEAT_XP`, `E1RM_PR_XP`, `WEIGHT_PR_XP`,
+  `REP_PR_XP`, `VOLUME_PR_XP`, `PR_XP_CAP`):** „Schlag dein letztes Mal" (Ghost)
+  gibt je Übung 15 XP, echte PRs 15–50 XP (gedeckelt bei 100/Workout). **Alle**
+  Boni sind replay-ableitbar und durch den Overreach-Guard gated (erhöhte Last →
+  0 Bonus). **Anti-Exploit:** Ein Gewichtssprung > 2× `incrementKg` („Ego-Lift")
+  gibt keinen Bonus, und **rückdatierte** (`backfilled`) Einheiten setzen zwar
+  Baselines, feiern aber nie (kein Farmen von PRs übers Datum).
+- **Transparenz-Prinzip (Anti-Fitbod):** Jede Empfehlung trägt einen deutschen
+  `reason`-String — die App sagt immer *warum*. Das ist der bewusste
+  Gegenentwurf zu Blackbox-Algorithmen; wahrgenommene Kompetenz (SDT) entsteht
+  aus Verstehen, nicht aus Gehorsam.
+- **Konstanten/Module:** `GHOST_BEAT_XP`, `E1RM_PR_XP`, `WEIGHT_PR_XP`,
+  `REP_PR_XP`, `VOLUME_PR_XP`, `PR_XP_CAP`, `REST_SECONDS_BY_SIZE`;
+  `src/domain/exercises.ts`, `src/domain/progression.ts`.
+- **Evidenz:** Foster sRPE (PMC5673663), Autoregulation/Deload
+  (s40798-021-00404-9; PubMed 40883636), Volumen-Landmark-Vorsicht 2025-Review
+  (PMC10948666, PMC10809978), Plotkin 2022, Refalo 2022, Ruple 2023.
+
 ## Quellen (Auswahl)
 
 - Self-Determination Theory — Ryan & Deci; NN/g „Autonomy, Relatedness,
@@ -210,3 +269,8 @@ hebt, bleibt eher dran.
 - Adaptive Ziele — PMC8820277 (adaptiv schlägt statisch in RCTs).
 - WHO 2020 Physical Activity Guidelines; Google-Fit „Heart Points".
 - Affekt → Adhärenz — PMC2390920 (affektive Reaktion sagt Aktivität voraus).
+- Progressive Overload v2 — 2-für-2/ACSM; Epley-Validität (Wdh. ≤ 12);
+  Autoregulation/RIR (Ruple 2023, Refalo 2022); Deload (s40798-021-00404-9,
+  PubMed 40883636, PMC10948666); Volumen-Landmark-Vorsicht 2025 (PMC10809978);
+  Load- vs. Rep-Progression gleichwertig (Plotkin 2022); Transparenz als
+  Anti-Fitbod-Prinzip.
