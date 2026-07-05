@@ -5,8 +5,10 @@ test.describe('Onboarding', () => {
   test('walks through the intro and lands on the dashboard', async ({ page }) => {
     await onboard(page, 'Alex')
     await expect(page.getByRole('heading', { name: /Alex/ })).toBeVisible()
-    await expect(page.getByRole('img', { name: /Momentum \d+ von 100/ })).toBeVisible()
-    await expect(page.getByText('Level 1').first()).toBeVisible()
+    // Fresh profile → warm first-run invitation (no empty ring), Level 1 pill.
+    await expect(page.getByText('Bereit für den ersten Schritt?')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Erste Einheit loggen' })).toBeVisible()
+    await expect(page.getByLabel('Level 1')).toBeVisible()
   })
 
   test('does not show onboarding again after completing it', async ({ page }) => {
@@ -66,11 +68,11 @@ test.describe('Logging workouts', () => {
 
     page.on('dialog', (d) => d.accept())
     await page.getByRole('button', { name: 'Einheit löschen' }).click()
-    await expect(page.getByText('Noch keine Einheiten. Tippe auf +, um loszulegen.')).toBeVisible()
+    await expect(page.getByText('Noch keine Einheiten. Tippe auf +, um deine erste zu loggen.')).toBeVisible()
 
-    // Back on the dashboard the count is reset to zero.
+    // Back on the dashboard the state is reset → the first-run invitation returns.
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByTestId('stat-total-workouts')).toContainText('0')
+    await expect(page.getByText('Bereit für den ersten Schritt?')).toBeVisible()
   })
 })
 
@@ -143,11 +145,13 @@ test.describe('Achievements screen', () => {
 test.describe('Profile', () => {
   test('can change the weekly goal', async ({ page }) => {
     await onboard(page)
+    // Log once so the dashboard shows the "Diese Woche" card (hidden at zero).
+    await logWorkout(page)
     await page.getByRole('button', { name: 'Profil' }).click()
     await expect(page.getByRole('heading', { name: 'Profil' })).toBeVisible()
     await page.getByLabel(/Wochenziel/).fill('6')
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByText('0 / 6')).toBeVisible()
+    await expect(page.getByText('1 / 6')).toBeVisible()
   })
 
   test('reset clears all data and returns to onboarding', async ({ page }) => {

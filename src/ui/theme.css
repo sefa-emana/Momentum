@@ -220,6 +220,46 @@ button {
   background: none;
 }
 
+/* ---- visible keyboard focus (a11y) — never shown for mouse/touch ---- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.input:focus-visible,
+.picker-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+/* Icon-only button — guarantees a ≥44px touch target (a11y). */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+/* Entrance fade — a calm 150ms settle once IndexedDB hydration is done, so the
+   app never hard-cuts from the blank shell (and never flashes onboarding). */
+.app-enter { animation: app-fade 0.15s ease both; }
+@keyframes app-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- shared section title (13px caps) ---- */
+.section-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
 input, select, textarea {
   font-family: inherit;
   font-size: 16px;
@@ -787,6 +827,83 @@ button.heatmap-cell { cursor: pointer; }
   flex: none;
   background: color-mix(in srgb, var(--state-rest) 16%, transparent);
   color: var(--state-rest);
+}
+
+/* ---- empty state (consistent across every seeded-empty screen) ---- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 32px 24px;
+}
+.empty-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.empty-state-text {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+/* ---- first-run dashboard invitation ---- */
+.first-run { padding: 28px 22px; }
+.first-run-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background: var(--accent-grad);
+  color: #fff;
+  box-shadow: 0 10px 26px -10px var(--accent-glow);
+}
+
+/* ---- onboarding ---- */
+.onboarding-skip {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 6px 10px;
+}
+.onboarding-focus {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.focus-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 8px;
+  border-radius: var(--radius);
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 88px;
+  box-shadow: var(--card-specular), var(--card-shadow);
+  transition: transform 0.08s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.focus-tile:active { transform: scale(0.97); }
+.focus-tile[data-active='true'] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ---- shield indicator ---- */

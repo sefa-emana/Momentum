@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { Check, Lock } from 'lucide-react'
+import { Check, Lock, Medal, Sprout } from 'lucide-react'
 import { useStore } from '../state/store'
 import { useNow } from '../ui/hooks'
 import {
@@ -20,6 +20,7 @@ import {
   achievementIcon,
   questIcon,
 } from '../ui/icons'
+import { EmptyState } from '../ui/EmptyState'
 
 export function Achievements() {
   const workouts = useStore((s) => s.workouts)
@@ -62,12 +63,10 @@ export function Achievements() {
       <section className="stack" style={{ gap: 12, marginBottom: 22 }}>
         <SectionTitle>Meisterschaft</SectionTitle>
         {trained.length === 0 ? (
-          <div className="card">
-            <p className="muted" style={{ fontSize: 13.5, margin: 0 }}>
-              Logge deine erste Einheit — jede Trainingsart baut ihre eigene
-              Meisterschaft auf.
-            </p>
-          </div>
+          <EmptyState icon={<Medal size={40} strokeWidth={1.5} aria-hidden />}>
+            Logge deine erste Einheit — jede Trainingsart baut ihre eigene
+            Meisterschaft auf.
+          </EmptyState>
         ) : (
           <div className="stack" style={{ gap: 10 }}>
             {trained.map(({ type, info }) => (
@@ -104,9 +103,9 @@ export function Achievements() {
       <section className="stack" style={{ gap: 12 }}>
         <SectionTitle>Freigeschaltet</SectionTitle>
         {unlockedAch.length === 0 ? (
-          <p className="muted" style={{ fontSize: 13, margin: '0 2px' }}>
+          <EmptyState icon={<Sprout size={40} strokeWidth={1.5} aria-hidden />}>
             Noch keine — dein erstes Training schaltet den ersten Erfolg frei.
-          </p>
+          </EmptyState>
         ) : (
           <div className="grid-2" style={{ gap: 12 }}>
             {unlockedAch.map((a) => (
@@ -134,15 +133,7 @@ function SectionTitle({
   style?: CSSProperties
 }) {
   return (
-    <strong
-      style={{
-        fontSize: 12,
-        textTransform: 'uppercase',
-        letterSpacing: '0.07em',
-        color: 'var(--text-dim)',
-        ...style,
-      }}
-    >
+    <strong className="section-title" style={style}>
       {children}
     </strong>
   )

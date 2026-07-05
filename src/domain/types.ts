@@ -131,6 +131,14 @@ export interface WeeklyGoal {
   workoutsPerWeek: number
 }
 
+/**
+ * How the user primarily trains — set during onboarding. Drives the default
+ * logging mode: Kraft/Gemischt default to Satz-Modus (per-set logging), Cardio
+ * defaults to the lighter duration-only quick log. The user can always switch
+ * per session, so this is only a sensible starting point (autonomy preserved).
+ */
+export type TrainingFocus = 'strength' | 'cardio' | 'mixed'
+
 export interface Settings {
   weeklyGoal: WeeklyGoal
   /** User-facing display name. */
@@ -139,6 +147,9 @@ export interface Settings {
   /** ISO timestamp of the last data export ("Backup"). Undefined = never.
    *  Drives the gentle backup-freshness nudge (data lives only on this device). */
   lastBackupAt?: string
+  /** Primary training style (onboarding step 3). Defaults to 'mixed' when unset,
+   *  so Satz-Modus stays the sensible default for strength sessions. */
+  trainingFocus?: TrainingFocus
 }
 
 export interface AppState {

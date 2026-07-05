@@ -8,15 +8,18 @@ export async function onboard(page: Page, name = 'Sefa', goal?: number) {
   await page.evaluate(() => localStorage.clear())
   await page.goto(APP_URL)
 
+  // Step 1 — Willkommen.
   await expect(page.getByRole('heading', { name: 'Momentum' })).toBeVisible()
   await page.getByRole('button', { name: 'Weiter' }).click()
 
+  // Step 2 — name + weekly goal.
   await page.getByLabel('Dein Name').fill(name)
-  await page.getByRole('button', { name: 'Weiter' }).click()
-
   if (goal !== undefined) {
     await page.getByLabel('Wochenziel').fill(String(goal))
   }
+  await page.getByRole('button', { name: 'Weiter' }).click()
+
+  // Step 3 — training focus (defaults to "Gemischt"); finish.
   await page.getByRole('button', { name: /Los geht/ }).click()
 
   await expect(page.getByRole('heading', { name: new RegExp(name) })).toBeVisible()

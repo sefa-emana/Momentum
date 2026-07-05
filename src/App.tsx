@@ -48,19 +48,19 @@ export default function App() {
 
   if (!onboarded) {
     return (
-      <div className="app-shell">
+      <div className="app-shell app-enter">
         <Onboarding />
       </div>
     )
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell app-enter">
       {tab === 'home' && (
         <Dashboard onLog={() => setLogOpen(true)} onOpenProgress={() => setTab('progress')} />
       )}
       {tab === 'history' && <History />}
-      {tab === 'progress' && <Progress />}
+      {tab === 'progress' && <Progress onLog={() => setLogOpen(true)} />}
       {tab === 'achievements' && <Achievements />}
       {tab === 'profile' && <Profile />}
 

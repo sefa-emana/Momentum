@@ -6,6 +6,7 @@ import { useNow } from '../ui/hooks'
 import { WORKOUT_TYPE_META, dayKey, type Workout } from '../domain'
 import { WORKOUT_TYPE_ICON, INTENSITY_ICON, ICON_STROKE } from '../ui/icons'
 import { summarizeEntries } from '../ui/entrySummary'
+import { EmptyState } from '../ui/EmptyState'
 import { Heatmap } from './Heatmap'
 import { EditWorkoutSheet } from './EditWorkoutSheet'
 import { LogWorkoutSheet } from './LogWorkoutSheet'
@@ -65,10 +66,9 @@ export function History() {
       <p className="screen-sub">{workouts.length} Einheiten insgesamt</p>
 
       {sorted.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 30 }}>
-          <Inbox size={40} strokeWidth={1.5} style={{ color: 'var(--text-faint)' }} aria-hidden />
-          <p className="muted">Noch keine Einheiten. Tippe auf +, um loszulegen.</p>
-        </div>
+        <EmptyState icon={<Inbox size={40} strokeWidth={1.5} aria-hidden />}>
+          Noch keine Einheiten. Tippe auf +, um deine erste zu loggen.
+        </EmptyState>
       ) : (
         <div className="stack" style={{ gap: 20 }}>
           <div className="card">
@@ -158,8 +158,8 @@ export function History() {
                       <span className="pill" style={{ color: 'var(--xp)' }}>+{w.xpEarned}</span>
                       <button
                         aria-label="Einheit löschen"
-                        className="btn-ghost"
-                        style={{ display: 'inline-flex', padding: 6, color: 'var(--text-faint)' }}
+                        className="btn-ghost icon-btn"
+                        style={{ color: 'var(--text-faint)' }}
                         onClick={() => doDelete(w)}
                       >
                         <Trash2 size={18} strokeWidth={ICON_STROKE} aria-hidden />

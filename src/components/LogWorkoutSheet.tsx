@@ -82,13 +82,18 @@ export function LogWorkoutSheet({
   const logWorkout = useStore((s) => s.logWorkout)
   const workouts = useStore((s) => s.workouts)
   const customExercises = useStore((s) => s.customExercises)
+  const trainingFocus = useStore((s) => s.settings.trainingFocus ?? 'mixed')
   const { momentum } = useDerived()
   const restRef = useRef<RestControl>(null)
+
+  // Satz-Modus is the sensible default for a strength session — unless the user
+  // told us they mainly do Cardio, in which case duration-only logging is lighter.
+  const setsDefault = (t: WorkoutType) => t === 'strength' && trainingFocus !== 'cardio'
 
   const initType = initial?.type ?? 'strength'
   const [type, setType] = useState<WorkoutType>(initType)
   const [setsMode, setSetsMode] = useState(
-    (initial?.entries?.length ?? 0) > 0 || initType === 'strength',
+    (initial?.entries?.length ?? 0) > 0 || setsDefault(initType),
   )
   const [intensity, setIntensity] = useState<Intensity>(initial?.intensity ?? 'moderate')
   const [duration, setDuration] = useState(initial?.durationMin ?? 30)
@@ -120,7 +125,7 @@ export function LogWorkoutSheet({
 
   const changeType = (t: WorkoutType) => {
     setType(t)
-    setSetsMode(t === 'strength')
+    setSetsMode(setsDefault(t))
   }
 
   const priorSameDayCount = useMemo(() => {

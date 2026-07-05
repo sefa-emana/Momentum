@@ -31,6 +31,7 @@ import { Sparkline } from '../ui/Sparkline'
 import { TrendChart } from '../ui/TrendChart'
 import { BarsChart } from '../ui/BarsChart'
 import { BottomSheet } from '../ui/BottomSheet'
+import { EmptyState } from '../ui/EmptyState'
 import { PATTERN_LABEL, PR_KIND_LABEL } from '../ui/exerciseMeta'
 
 const fmtKg = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 })
@@ -43,7 +44,7 @@ const STALL_LABEL: Record<Exclude<StallState, 'progressing'>, string> = {
   stalled: 'Stagniert',
 }
 
-export function Progress() {
+export function Progress({ onLog }: { onLog?: () => void }) {
   const workouts = useStore((s) => s.workouts)
   const customExercises = useStore((s) => s.customExercises)
   const now = useNow()
@@ -67,13 +68,20 @@ export function Progress() {
       <p className="screen-sub">Echter Fortschritt pro Übung — sichtbar gemacht.</p>
 
       {nothing ? (
-        <div className="card" style={{ textAlign: 'center', padding: 30 }}>
-          <TrendingUp size={40} strokeWidth={1.5} style={{ color: 'var(--text-faint)' }} aria-hidden />
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Logge Kraft-Einheiten im Satz-Modus — dann zeigen wir dir hier deinen
-            Verlauf, deine Bestwerte und die nächste Steigerung.
-          </p>
-        </div>
+        <EmptyState
+          icon={<TrendingUp size={40} strokeWidth={1.5} aria-hidden />}
+          action={
+            onLog ? (
+              <button className="btn btn-primary" onClick={onLog}>
+                <Dumbbell size={18} strokeWidth={ICON_STROKE} aria-hidden />
+                Kraft im Satz-Modus loggen
+              </button>
+            ) : undefined
+          }
+        >
+          Logge eine Kraft-Einheit im Satz-Modus — dann zeigen wir dir hier
+          deinen Verlauf, deine Bestwerte und die nächste Steigerung.
+        </EmptyState>
       ) : (
         <div className="stack" style={{ gap: 20 }}>
           {patterns.length > 0 && <PatternBalance />}
@@ -409,16 +417,5 @@ function ExerciseDetail({ exerciseId, onClose }: { exerciseId: string; onClose: 
 // ---------------------------------------------------------------------------
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <strong
-      style={{
-        fontSize: 12,
-        textTransform: 'uppercase',
-        letterSpacing: '0.07em',
-        color: 'var(--text-dim)',
-      }}
-    >
-      {children}
-    </strong>
-  )
+  return <strong className="section-title">{children}</strong>
 }

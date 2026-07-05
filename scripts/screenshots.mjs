@@ -242,6 +242,33 @@ function buildState(engine) {
   return { state: persistedState, version: STATE_VERSION }
 }
 
+/** A brand-new, onboarded profile with ZERO workouts — drives the empty-state
+ *  pass (warm invitation dashboard + Fortschritt CTA). */
+function buildEmptyState() {
+  const now = Date.now()
+  const persistedState = {
+    version: STATE_VERSION,
+    createdAt: iso(now - 2 * DAY),
+    workouts: [],
+    bonusXp: 0,
+    goalMetWeeks: [],
+    progressWeeks: [],
+    pauses: [],
+    acceptedQuests: [],
+    questsDone: [],
+    unlocked: [],
+    customExercises: [],
+    settings: {
+      name: 'Sefa',
+      weeklyGoal: { workoutsPerWeek: 4 },
+      reducedMotion: false,
+      trainingFocus: 'mixed',
+    },
+    onboarded: true,
+  }
+  return { state: persistedState, version: STATE_VERSION }
+}
+
 // ---------------------------------------------------------------------------
 // 3. Preview server helpers.
 // ---------------------------------------------------------------------------
@@ -299,6 +326,38 @@ async function gotoApp(page) {
   await page.getByRole('navigation', { name: 'Hauptnavigation' }).waitFor({ timeout: 15_000 })
   await page.getByText('Momentum', { exact: true }).first().waitFor({ timeout: 15_000 })
   await page.waitForTimeout(700) // settle animations / ring fill
+}
+
+/** Blank context — no seeded app state, only the theme (drives onboarding). */
+async function newBlankContext(browser, theme) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: theme === 'dark' ? 'dark' : 'light',
+  })
+  await context.addInitScript((theme) => {
+    try {
+      localStorage.setItem('momentum-theme', theme)
+    } catch {
+      /* ignore */
+    }
+  }, theme)
+  return context
+}
+
+async function gotoOnboarding(page) {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.getByRole('button', { name: 'Weiter' }).waitFor({ timeout: 15_000 })
+  await page.waitForTimeout(500)
+}
+
+async function gotoEmptyApp(page) {
+  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).waitFor({ timeout: 15_000 })
+  await page.getByRole('button', { name: 'Erste Einheit loggen' }).waitFor({ timeout: 15_000 })
+  await page.waitForTimeout(500)
 }
 
 async function shoot(page, name) {
@@ -405,6 +464,22 @@ async function main() {
     await gotoApp(darkPage)
     await shoot(darkPage, '06-dashboard-dark')
     await dark.close()
+
+    // ---- Empty-state pass: a brand-new profile (first impression). ----
+    const blank = await newBlankContext(browser, 'light')
+    const onbPage = await blank.newPage()
+    await gotoOnboarding(onbPage)
+    await shoot(onbPage, '11-onboarding')
+    await blank.close()
+
+    const empty = await newSeededContext(browser, buildEmptyState(), 'light')
+    const emptyPage = await empty.newPage()
+    await gotoEmptyApp(emptyPage)
+    await shoot(emptyPage, '12-dashboard-empty')
+    await openTab(emptyPage, 'Fortschritt')
+    await emptyPage.waitForTimeout(500)
+    await shoot(emptyPage, '13-fortschritt-empty')
+    await empty.close()
   } finally {
     await browser.close()
     server.kill('SIGTERM')

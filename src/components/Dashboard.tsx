@@ -84,6 +84,54 @@ export function Dashboard({ onLog, onOpenProgress }: { onLog: () => void; onOpen
   const whoPct = Math.min(1, d.weeklyWhoPoints / WHO_WEEKLY_POINTS_TARGET)
   const whoMet = d.weeklyWhoPoints >= WHO_WEEKLY_POINTS_TARGET
 
+  // First run — a new user must never face an empty ring. Show a warm
+  // invitation instead and hide the Woche / Fortschritt / activity cards until
+  // there is real data to fill them.
+  if (d.totalWorkouts === 0) {
+    return (
+      <div className="screen">
+        <div className="row-between" style={{ marginBottom: 16 }}>
+          <div>
+            <div className="muted" style={{ fontSize: 14 }}>{greeting},</div>
+            <h1 className="screen-title">{name || 'Athlet'}</h1>
+          </div>
+          <div className="pill" aria-label={`Level ${d.level.level}`}>
+            <Star size={16} strokeWidth={ICON_STROKE} aria-hidden />
+            Level <Ticker value={d.level.level} />
+          </div>
+        </div>
+
+        <div className="card first-run stack" style={{ alignItems: 'center', textAlign: 'center', gap: 14 }}>
+          <span className="first-run-icon" aria-hidden>
+            <Flame size={34} strokeWidth={ICON_STROKE} />
+          </span>
+          <div className="stack" style={{ gap: 6 }}>
+            <strong style={{ fontSize: 19 }}>Bereit für den ersten Schritt?</strong>
+            <p className="muted" style={{ margin: 0, fontSize: 14, maxWidth: 300 }}>
+              Deine erste Einheit startet dein Momentum. Auch fünf Minuten zählen
+              — zeig dich einfach.
+            </p>
+          </div>
+          <button className="btn btn-primary btn-block" onClick={onLog}>
+            <Zap size={18} strokeWidth={ICON_STROKE} aria-hidden />
+            Erste Einheit loggen
+          </button>
+        </div>
+
+        <ul className="stack first-run-hints" style={{ listStyle: 'none', padding: 0, margin: '18px 2px 0', gap: 12 }}>
+          <li className="row" style={{ gap: 10 }}>
+            <TrendingUp size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)', flex: 'none' }} aria-hidden />
+            <span className="muted" style={{ fontSize: 13.5 }}>Dein Fortschritt wird pro Übung sichtbar — Satz für Satz.</span>
+          </li>
+          <li className="row" style={{ gap: 10 }}>
+            <Shield size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)', flex: 'none' }} aria-hidden />
+            <span className="muted" style={{ fontSize: 13.5 }}>Schutzschilde fangen verpasste Tage automatisch ab.</span>
+          </li>
+        </ul>
+      </div>
+    )
+  }
+
   return (
     <div className="screen">
       <div className="row-between" style={{ marginBottom: 16 }}>
@@ -135,7 +183,7 @@ export function Dashboard({ onLog, onOpenProgress }: { onLog: () => void; onOpen
           ) : (
             <>
               <p className="muted" style={{ textAlign: 'center', margin: 0, fontSize: 14 }}>
-                {d.trainedToday ? 'Stark! Heute schon trainiert.' : tierMeta.message}
+                {d.trainedToday ? 'Stark — heute schon trainiert.' : tierMeta.message}
               </p>
               {!d.trainedToday && (
                 <button className="btn btn-primary btn-block" onClick={onLog}>
@@ -295,7 +343,7 @@ export function Dashboard({ onLog, onOpenProgress }: { onLog: () => void; onOpen
               <Flame size={20} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)' }} aria-hidden />
               <Ticker className="tnum" value={d.currentStreak} />
             </div>
-            <div className="stat-label">Tage-Streak {d.currentStreak > 0 ? '(never miss twice)' : ''}</div>
+            <div className="stat-label">Tage-Streak</div>
           </div>
           <div className="stat">
             <div className="stat-value" data-testid="stat-total-workouts">

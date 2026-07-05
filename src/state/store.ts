@@ -59,6 +59,7 @@ import {
   type Pause,
   type PRKind,
   type QuestDef,
+  type TrainingFocus,
   type Workout,
   type WorkoutType,
 } from '../domain'
@@ -169,7 +170,7 @@ interface StoreActions {
   setReducedMotion: (v: boolean) => void
   /** Record that the user just exported their data (backup-freshness nudge). */
   markBackup: () => void
-  completeOnboarding: (name: string, weeklyGoal: number) => void
+  completeOnboarding: (name: string, weeklyGoal: number, trainingFocus?: TrainingFocus) => void
   /** Opt into a weekly quest offered this ISO week (at most 2 per week). */
   acceptQuest: (id: string) => void
   /** Begin a "Life happened" pause (no-op if one is already active). */
@@ -212,6 +213,7 @@ export function initialState(): AppState {
       name: '',
       weeklyGoal: { workoutsPerWeek: DEFAULT_WEEKLY_GOAL },
       reducedMotion: false,
+      trainingFocus: 'mixed',
     },
   }
 }
@@ -591,13 +593,14 @@ export const useStore = create<Store>()(
         set((s) => ({ settings: { ...s.settings, lastBackupAt: nowIso() } }))
       },
 
-      completeOnboarding: (name, weeklyGoal) => {
+      completeOnboarding: (name, weeklyGoal, trainingFocus = 'mixed') => {
         set((s) => ({
           onboarded: true,
           settings: {
             ...s.settings,
             name: name.trim(),
             weeklyGoal: { workoutsPerWeek: weeklyGoal },
+            trainingFocus,
           },
         }))
       },
