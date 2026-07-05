@@ -138,36 +138,52 @@ function generateWorkouts(now, weekStartMs) {
     push(now - 3 * 3600_000, 'cardio', 40, 'moderate', { feel: 5 })
   }
 
-  // Progression Engine v2: two prior strength sessions WITH per-set entries so
-  // the log sheet shows ghost values + an "addWeight" progression hint, and the
-  // history/edit sheet render real set summaries. Both sessions hit the top of
-  // the rep band at the same load → the 2×2 rule fires (+2,5 kg).
-  const strengthEntries = () => [
-    {
-      exerciseId: 'bench-press',
-      sets: [
-        { weightKg: 60, reps: 8, kind: 'normal' },
-        { weightKg: 60, reps: 8, kind: 'normal' },
-        { weightKg: 60, reps: 8, kind: 'normal' },
-      ],
-    },
-    {
-      exerciseId: 'barbell-row',
-      sets: [
-        { weightKg: 50, reps: 10, kind: 'normal' },
-        { weightKg: 50, reps: 10, kind: 'normal' },
-        { weightKg: 50, reps: 10, kind: 'normal' },
-      ],
-    },
+  // Progression Engine v2: ~8 weekly strength sessions WITH per-set entries so
+  // the Fortschritt trends/volume charts show a real, rising progression and the
+  // log/edit sheets render honest set summaries. Bankdrücken (band 5–8, +2,5 kg)
+  // and Langhantelrudern (band 6–10, +2,5 kg) climb via honest double
+  // progression: work reps up to the top of the band, then add load. The two
+  // most recent sessions sit at the top of the band on the SAME load, so the
+  // 2×2 rule fires (+2,5 kg) — exactly what a disciplined lifter would see.
+  const threeSets = (weightKg, reps) => [
+    { weightKg, reps, kind: 'normal' },
+    { weightKg, reps, kind: 'normal' },
+    { weightKg, reps, kind: 'normal' },
   ]
-  push(now - 11 * DAY + 18 * 3600_000, 'strength', 55, 'vigorous', {
-    feel: 7,
-    entries: strengthEntries(),
-  })
-  push(now - 4 * DAY + 18 * 3600_000, 'strength', 55, 'vigorous', {
-    feel: 7,
-    entries: strengthEntries(),
-  })
+  // Oldest → newest (one session per week for the last 8 weeks).
+  const benchPlan = [
+    { weightKg: 52.5, reps: 6 },
+    { weightKg: 52.5, reps: 8 },
+    { weightKg: 55, reps: 7 },
+    { weightKg: 55, reps: 8 },
+    { weightKg: 57.5, reps: 7 },
+    { weightKg: 57.5, reps: 8 },
+    { weightKg: 60, reps: 8 },
+    { weightKg: 60, reps: 8 },
+  ]
+  const rowPlan = [
+    { weightKg: 47.5, reps: 8 },
+    { weightKg: 47.5, reps: 10 },
+    { weightKg: 50, reps: 8 },
+    { weightKg: 50, reps: 10 },
+    { weightKg: 52.5, reps: 8 },
+    { weightKg: 52.5, reps: 10 },
+    { weightKg: 55, reps: 10 },
+    { weightKg: 55, reps: 10 },
+  ]
+  for (let s = 0; s < benchPlan.length; s++) {
+    const weeksAgo = benchPlan.length - 1 - s // 7 (oldest) … 0 (newest)
+    const ms = now - (weeksAgo * 7 + 2) * DAY + 18 * 3600_000
+    const b = benchPlan[s]
+    const r = rowPlan[s]
+    push(ms, 'strength', 55, 'vigorous', {
+      feel: 7,
+      entries: [
+        { exerciseId: 'bench-press', sets: threeSets(b.weightKg, b.reps) },
+        { exerciseId: 'barbell-row', sets: threeSets(r.weightKg, r.reps) },
+      ],
+    })
+  }
 
   return out.sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
 }

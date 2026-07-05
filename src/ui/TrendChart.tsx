@@ -49,17 +49,20 @@ export function TrendChart({
     value: d.value,
   }))
 
+  const multi = pts.length >= 2
   const line = pts
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(' ')
   const baseY = height - PAD_BOTTOM
-  const area = pts.length
+  const area = multi
     ? `${line} L${pts[pts.length - 1].x.toFixed(1)},${baseY} L${pts[0].x.toFixed(1)},${baseY} Z`
     : ''
 
   // Sparse x labels: first, last, and (when there is room) the middle week.
   const labelIdx = new Set<number>([0, data.length - 1])
   if (data.length >= 5) labelIdx.add(Math.floor((data.length - 1) / 2))
+  const minValue = values.length ? Math.min(...values) : 0
+  const maxValue = values.length ? Math.max(...values) : 0
 
   return (
     <div className="trend-chart">
@@ -90,7 +93,7 @@ export function TrendChart({
         />
 
         {area && <path d={area} fill={`url(#trend-fill-${gid})`} stroke="none" />}
-        {line && (
+        {multi && (
           <path
             d={line}
             fill="none"
@@ -100,7 +103,7 @@ export function TrendChart({
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
             style={
-              reduced || pts.length < 2
+              reduced
                 ? undefined
                 : { strokeDasharray: 1000, strokeDashoffset: 0, animation: 'trend-draw 0.7s ease' }
             }
@@ -121,7 +124,25 @@ export function TrendChart({
         ))}
       </svg>
 
-      {/* Non-scaling overlay for tabular labels (kept out of the stretched SVG). */}
+      {/* Left-axis y labels + a single centred readout when there is one point. */}
+      {multi ? (
+        <>
+          <span className="trend-y trend-y-max faint tnum" aria-hidden>
+            {formatValue(maxValue)}
+          </span>
+          <span className="trend-y trend-y-min faint tnum" aria-hidden>
+            {formatValue(minValue)}
+          </span>
+        </>
+      ) : (
+        pts.length === 1 && (
+          <span className="trend-solo tnum" aria-hidden>
+            {formatValue(pts[0].value)}
+          </span>
+        )
+      )}
+
+      {/* Non-scaling overlay for tabular x labels (kept out of the stretched SVG). */}
       <div className="trend-axis" aria-hidden>
         {pts.map((p, i) =>
           labelIdx.has(i) ? (
@@ -134,10 +155,6 @@ export function TrendChart({
             </span>
           ) : null,
         )}
-      </div>
-      <div className="trend-yrange faint tnum" aria-hidden>
-        <span>{formatValue(bounds.max)}</span>
-        <span>{formatValue(Math.min(...values))}</span>
       </div>
     </div>
   )

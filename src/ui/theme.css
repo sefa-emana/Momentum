@@ -50,6 +50,10 @@
   --glass-fill: rgba(30, 30, 33, 0.6);
   --glass-fill-strong: rgba(22, 22, 24, 0.78);
   --glass-fill-thin: rgba(38, 38, 42, 0.45);
+  /* Bottom sheets carry data-dense content (charts, tables) — the surface behind
+     it must be effectively opaque so nothing bleeds through, while the blurred
+     border/highlight keeps the glass-chrome edge. */
+  --sheet-fill: rgba(22, 22, 24, 0.985);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-highlight: rgba(255, 255, 255, 0.4); /* top inset specular */
   --glass-lowlight: rgba(0, 0, 0, 0.3); /* bottom inset lowlight */
@@ -136,6 +140,7 @@
   --glass-fill: rgba(255, 255, 255, 0.72);
   --glass-fill-strong: rgba(255, 255, 255, 0.85);
   --glass-fill-thin: rgba(255, 255, 255, 0.6);
+  --sheet-fill: rgba(255, 255, 255, 0.985);
   --glass-border: rgba(0, 0, 0, 0.06);
   --glass-highlight: rgba(255, 255, 255, 0.9);
   --glass-lowlight: rgba(0, 0, 0, 0.05);
@@ -500,7 +505,7 @@ input, select, textarea {
 .sheet {
   width: 100%;
   max-width: var(--maxw);
-  background: var(--glass-fill-strong);
+  background: var(--sheet-fill);
   -webkit-backdrop-filter: blur(30px) saturate(170%);
   backdrop-filter: blur(30px) saturate(170%);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -1157,11 +1162,63 @@ button.heatmap-cell { cursor: pointer; }
   color: var(--text-faint);
   white-space: nowrap;
 }
-.trend-yrange {
-  display: flex;
-  justify-content: space-between;
+/* Min/max value labels sit in the left axis gutter, not an orphan row. */
+.trend-y {
+  position: absolute;
+  left: 0;
   font-size: 10.5px;
-  margin-top: 2px;
+  line-height: 1;
+}
+.trend-y-max { top: 2px; }
+.trend-y-min { bottom: 24px; }
+/* Single-point series: a lone dot + its value, centred. */
+.trend-solo {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+}
+
+/* Bar chart — flex layout keeps value / bar / week label column-aligned. */
+.bars-chart { width: 100%; }
+.bars-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  height: var(--bars-h, 130px);
+}
+.bars-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bars-val {
+  font-size: 10.5px;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.bars-track {
+  flex: 1;
+  width: 100%;
+  max-width: 48px;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--hairline);
+}
+.bars-fill {
+  width: 100%;
+  min-height: 0;
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+}
+.bars-x {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
 }
 .empty-chart {
   display: flex;
