@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
-import { Flame, Heart, Star, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { Check, Flame, Heart, Sparkles, Star, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
 import type { WorkoutReward } from '../state/store'
 import { achievementIcon, ICON_STROKE } from '../ui/icons'
 import { Ticker } from '../ui/Ticker'
@@ -37,7 +37,10 @@ export function RewardOverlay({
     : null
 
   const HeroIcon = reward.leveledUp ? Star : reward.isComeback ? Flame : Zap
-  const celebrate = reward.leveledUp || reward.newAchievements.length > 0
+  const celebrate =
+    reward.leveledUp ||
+    reward.newAchievements.length > 0 ||
+    reward.questsCompleted.length > 0
 
   return (
     <motion.div
@@ -125,6 +128,27 @@ export function RewardOverlay({
               )}
             </div>
           )
+        )}
+
+        {(reward.questsCompleted.length > 0 || reward.surpriseXp > 0) && (
+          <div className="row" style={{ justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            {reward.questsCompleted.map((q) => (
+              <span
+                key={q.id}
+                className="pill"
+                style={{ borderColor: 'var(--state-strong)', color: 'var(--state-strong)' }}
+              >
+                <Check size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                Quest geschafft: {q.title} +{q.bonusXp} XP
+              </span>
+            ))}
+            {reward.surpriseXp > 0 && (
+              <span className="pill" style={{ borderColor: 'var(--xp)', color: 'var(--xp)' }}>
+                <Sparkles size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                Überraschung! +{reward.surpriseXp} XP
+              </span>
+            )}
+          </div>
         )}
 
         {moodAfter !== undefined && moodAfter >= 4 && (

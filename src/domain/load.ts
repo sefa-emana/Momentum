@@ -11,10 +11,12 @@
  */
 import { addDays } from 'date-fns'
 import {
+  COMEBACK_GAP_DAYS,
   INTENSITY_RPE,
   LOAD_DURATION_CAP_MIN,
   LOAD_RATIO_ELEVATED,
   WHO_POINTS_PER_MIN,
+  WHO_WEEKLY_POINTS_TARGET,
 } from './constants'
 import { dayKey, daysBetween, isInThisWeek, toDate, weekKey } from './dates'
 import type { Workout } from './types'
@@ -121,6 +123,39 @@ export function weeklyWhoPoints(workouts: Workout[], now: string | Date): number
   return workouts
     .filter((w) => isInThisWeek(w.date, now))
     .reduce((s, w) => s + WHO_POINTS_PER_MIN[w.intensity] * w.durationMin, 0)
+}
+
+/**
+ * Number of *distinct ISO weeks* in the history that reached the WHO weekly
+ * points target (default 150) — an all-time count, derived by iterating the
+ * weeks present in the workout log. Pure, so achievements keyed on it replay
+ * consistently.
+ */
+export function whoWeeksMet(
+  workouts: Workout[],
+  target: number = WHO_WEEKLY_POINTS_TARGET,
+): number {
+  const byWeek = new Map<string, number>()
+  for (const w of workouts) {
+    const k = weekKey(w.date)
+    byWeek.set(k, (byWeek.get(k) ?? 0) + WHO_POINTS_PER_MIN[w.intensity] * w.durationMin)
+  }
+  let n = 0
+  for (const pts of byWeek.values()) if (pts >= target) n += 1
+  return n
+}
+
+/** Number of comebacks in the history: gaps of ≥ COMEBACK_GAP_DAYS days between
+ *  consecutive workouts. Pure/derivable for the comeback-count achievement. */
+export function countComebacks(workouts: Workout[]): number {
+  const sorted = [...workouts].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  )
+  let n = 0
+  for (let i = 1; i < sorted.length; i++) {
+    if (daysBetween(sorted[i - 1].date, sorted[i].date) >= COMEBACK_GAP_DAYS) n += 1
+  }
+  return n
 }
 
 /** Distinct strength sessions logged in the current ISO week (WHO target: 2). */

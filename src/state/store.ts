@@ -13,8 +13,11 @@ import {
   PR_BONUS_XP,
   PROGRESS_BONUS_XP,
   LOAD_RATIO_ELEVATED,
+  SURPRISE_BONUS_XP,
   WEEKLY_GOAL_BONUS_XP,
+  WORKOUT_TYPES,
   computeMomentumDetail,
+  countComebacks,
   dayKey,
   levelFromXp,
   loadRatio,
@@ -22,23 +25,30 @@ import {
   longestStreak,
   computeStreak,
   isComebackNow,
+  newlyCompletedQuests,
   newlyUnlocked,
+  offeredQuests,
   overreachStatus,
+  surpriseBonusFor,
   totalXp as sumWorkoutXp,
+  typesAtMasteryLevel,
   weeklyWhoPoints,
+  whoWeeksMet,
   xpForWorkout,
   weekKey,
   weekProgress,
   type AchievementDef,
+  type AcceptedQuest,
   type AppState,
   type Intensity,
   type Pause,
+  type QuestDef,
   type Workout,
   type WorkoutType,
 } from '../domain'
 
 export const STORAGE_KEY = 'momentum-state-v1'
-const STATE_VERSION = 2
+const STATE_VERSION = 3
 
 export interface LogWorkoutInput {
   type: WorkoutType
@@ -53,6 +63,10 @@ export interface LogWorkoutInput {
   prBeaten?: boolean
   moodBefore?: 1 | 2 | 3 | 4 | 5
   moodAfter?: 1 | 2 | 3 | 4 | 5
+  /** Preserve an existing workout id (used by the replay in
+   *  rebuildFromWorkouts so id-keyed rewards like the surprise bonus stay
+   *  deterministic). Live logging omits it and a fresh id is minted. */
+  id?: string
 }
 
 /** Rich result describing everything that changed — drives the reward UI. */
@@ -81,6 +95,12 @@ export interface WorkoutReward {
   /** True when the load ratio is elevated — UI shows a gentle note and no
    *  progress/PR bonus is granted (never reward overreaching). */
   overreach: boolean
+  /** Accepted quests this session just completed (drives quest pills + confetti). */
+  questsCompleted: QuestDef[]
+  /** Total bonus XP from quests completed this session. */
+  questBonusXp: number
+  /** Ethical surprise bonus for this workout (0 or SURPRISE_BONUS_XP). */
+  surpriseXp: number
   newAchievements: AchievementDef[]
   bonusXp: number
 }
@@ -92,6 +112,8 @@ interface StoreActions {
   setName: (name: string) => void
   setReducedMotion: (v: boolean) => void
   completeOnboarding: (name: string, weeklyGoal: number) => void
+  /** Opt into a weekly quest offered this ISO week (at most 2 per week). */
+  acceptQuest: (id: string) => void
   /** Begin a "Life happened" pause (no-op if one is already active). */
   startPause: () => void
   /** End the active pause (sets its `to` to today). */
@@ -123,6 +145,8 @@ export function initialState(): AppState {
     goalMetWeeks: [],
     progressWeeks: [],
     pauses: [],
+    acceptedQuests: [],
+    questsDone: [],
     unlocked: [],
     onboarded: false,
     settings: {
@@ -134,22 +158,23 @@ export function initialState(): AppState {
 }
 
 /**
- * Persist migration (v1 → v2): add the forgiveness-layer fields
- * (`progressWeeks`, `pauses`) and tolerate any other keys missing from an older
- * persisted state. Exported so it can be unit-tested directly.
+ * Persist migration up to the current STATE_VERSION. Cumulative and defensive:
+ * v1 → v2 added the forgiveness-layer fields (`progressWeeks`, `pauses`);
+ * v2 → v3 adds the endgame quest fields (`acceptedQuests`, `questsDone`). Any
+ * key missing from an older persisted state is filled from `initialState()`.
+ * Exported so it can be unit-tested directly.
  */
-export function migratePersisted(persisted: unknown, version: number): AppState {
+export function migratePersisted(persisted: unknown, _version: number): AppState {
   const s = (persisted ?? {}) as Partial<AppState>
-  if (version < 2) {
-    return {
-      ...initialState(),
-      ...s,
-      progressWeeks: s.progressWeeks ?? [],
-      pauses: s.pauses ?? [],
-      version: STATE_VERSION,
-    }
+  return {
+    ...initialState(),
+    ...s,
+    progressWeeks: s.progressWeeks ?? [],
+    pauses: s.pauses ?? [],
+    acceptedQuests: s.acceptedQuests ?? [],
+    questsDone: s.questsDone ?? [],
+    version: STATE_VERSION,
   }
-  return s as AppState
 }
 
 /** Pure reducer for logging a workout — extracted so it can be unit-tested
@@ -181,7 +206,7 @@ export function reduceLogWorkout(
   })
 
   const workout: Workout = {
-    id: newId(),
+    id: input.id ?? newId(),
     date: at,
     type: input.type,
     durationMin: input.durationMin,
@@ -231,7 +256,24 @@ export function reduceLogWorkout(
   const goalBonusXp = goalJustMet ? WEEKLY_GOAL_BONUS_XP : 0
   const goalMetWeeks = goalJustMet ? [...state.goalMetWeeks, wk] : state.goalMetWeeks
 
-  const preAchievementBonus = goalBonusXp + prBonusXp + progressBonusXp
+  // --- Weekly quests: award an accepted quest's bonus the moment a logged ---
+  // workout completes it (derived, once per (week,id) — replay reproduces it).
+  const questsCompleted = newlyCompletedQuests(
+    state.acceptedQuests,
+    state.questsDone,
+    workouts,
+    at,
+  )
+  const questBonusXp = questsCompleted.reduce((s, q) => s + q.bonusXp, 0)
+  const questsDone = questsCompleted.length
+    ? [...state.questsDone, ...questsCompleted.map((q) => ({ id: q.id, week: wk }))]
+    : state.questsDone
+
+  // --- Ethical surprise bonus: always additive, id-hash-triggered (≈1/8). ---
+  const surpriseXp = surpriseBonusFor(workout.id) ? SURPRISE_BONUS_XP : 0
+
+  const preAchievementBonus =
+    goalBonusXp + prBonusXp + progressBonusXp + questBonusXp + surpriseXp
 
   // Achievements — evaluate against the fresh derived context.
   const totalXpMid = sumWorkoutXp(workouts) + state.bonusXp + preAchievementBonus
@@ -252,6 +294,11 @@ export function reduceLogWorkout(
     weeklyGoalsMet: goalMetWeeks.length,
     distinctTypesThisWeek,
     workouts,
+    whoWeeksMet: whoWeeksMet(workouts),
+    progressWeeksCount: progressWeeks.length,
+    prCount: workouts.filter((w) => w.prBeaten).length,
+    mastery5Count: typesAtMasteryLevel(workouts, WORKOUT_TYPES, 5),
+    comebackCount: countComebacks(workouts),
   })
   const achievementBonus = fresh.reduce((s, a) => s + a.bonusXp, 0)
   const unlocked = [
@@ -269,6 +316,7 @@ export function reduceLogWorkout(
     bonusXp,
     goalMetWeeks,
     progressWeeks,
+    questsDone,
     unlocked,
   }
 
@@ -290,6 +338,9 @@ export function reduceLogWorkout(
     shieldsRemaining: afterDetail.shieldsRemaining,
     weeklyWhoPoints: weeklyWhoPoints(workouts, at),
     overreach,
+    questsCompleted,
+    questBonusXp,
+    surpriseXp,
     newAchievements: fresh,
     bonusXp: preAchievementBonus + achievementBonus,
   }
@@ -305,16 +356,20 @@ export function reduceLogWorkout(
  * essential after a deletion, which would otherwise leave them stranded.
  */
 export function rebuildFromWorkouts(
-  prev: Pick<AppState, 'createdAt' | 'onboarded' | 'settings' | 'version' | 'pauses'>,
+  prev: Pick<
+    AppState,
+    'createdAt' | 'onboarded' | 'settings' | 'version' | 'pauses' | 'acceptedQuests'
+  >,
   workouts: Workout[],
 ): AppState {
   const sorted = [...workouts].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  // Pauses are raw facts, not derived accumulators — carry them through so the
-  // replay computes momentum/streaks against the same frozen days. Everything
-  // else (bonusXp, goalMetWeeks, progressWeeks, unlocked) rebuilds via replay.
+  // Pauses and accepted quests are raw user facts, not derived accumulators —
+  // carry them through so the replay computes momentum/streaks/quests against
+  // the same inputs. Everything else (bonusXp, goalMetWeeks, progressWeeks,
+  // questsDone, unlocked) rebuilds via replay.
   let base: AppState = {
     ...initialState(),
     version: prev.version,
@@ -322,21 +377,27 @@ export function rebuildFromWorkouts(
     onboarded: prev.onboarded,
     settings: prev.settings,
     pauses: prev.pauses,
+    acceptedQuests: prev.acceptedQuests,
   }
 
   for (const w of sorted) {
+    // Pass every persisted field through — id (so id-keyed rewards like the
+    // surprise bonus stay deterministic) and feel/prBeaten/mood (so load and
+    // PR-based derivations replay identically).
     base = reduceLogWorkout(base, {
+      id: w.id,
       type: w.type,
       durationMin: w.durationMin,
       intensity: w.intensity,
       note: w.note,
       date: w.date,
+      feel: w.feel,
+      prBeaten: w.prBeaten,
+      moodBefore: w.moodBefore,
+      moodAfter: w.moodAfter,
     }).next
   }
 
-  // Preserve the original workout ids (replay regenerates them). The replay
-  // processes workouts in the same chronological order, so indices align.
-  base.workouts = base.workouts.map((w, i) => ({ ...w, id: sorted[i].id }))
   return base
 }
 
@@ -389,6 +450,19 @@ export const useStore = create<Store>()(
         }))
       },
 
+      acceptQuest: (id) => {
+        set((s) => {
+          const wk = weekKey(nowIso())
+          // Only quests actually offered this ISO week can be accepted.
+          if (!offeredQuests(wk).some((q) => q.id === id)) return {}
+          const thisWeek = s.acceptedQuests.filter((q) => q.week === wk)
+          if (thisWeek.some((q) => q.id === id)) return {} // already accepted
+          if (thisWeek.length >= 2) return {} // at most 2 per week
+          const accepted: AcceptedQuest = { id, week: wk, acceptedAt: nowIso() }
+          return { acceptedQuests: [...s.acceptedQuests, accepted] }
+        })
+      },
+
       startPause: () => {
         set((s) => {
           // At most one active pause.
@@ -429,6 +503,8 @@ export const useStore = create<Store>()(
         goalMetWeeks: s.goalMetWeeks,
         progressWeeks: s.progressWeeks,
         pauses: s.pauses,
+        acceptedQuests: s.acceptedQuests,
+        questsDone: s.questsDone,
         unlocked: s.unlocked,
         settings: s.settings,
         onboarded: s.onboarded,

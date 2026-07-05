@@ -70,6 +70,24 @@ export interface UnlockedAchievement {
   unlockedAt: string
 }
 
+/**
+ * A weekly quest the user has opted into. `week` is the ISO-week key the quest
+ * belongs to; `acceptedAt` is the acceptance timestamp — a workout only counts
+ * toward completion if it is logged at/after this moment, which keeps live and
+ * replayed state identical (both compare persisted facts only).
+ */
+export interface AcceptedQuest {
+  id: string
+  week: string
+  acceptedAt: string
+}
+
+/** A completed quest, tracked once per (week, id) so its bonus is granted once. */
+export interface QuestRef {
+  id: string
+  week: string
+}
+
 export interface WeeklyGoal {
   /** Target number of workouts per ISO week. */
   workoutsPerWeek: number
@@ -97,6 +115,12 @@ export interface AppState {
   progressWeeks: string[]
   /** "Life happened" pauses that freeze decay and streaks. */
   pauses: Pause[]
+  /** Weekly quests the user has opted into (raw user input, passed through
+   *  replay like settings/pauses). */
+  acceptedQuests: AcceptedQuest[]
+  /** Completed quests — derived accumulator, re-derived by rebuildFromWorkouts
+   *  exactly like `progressWeeks`, so each quest bonus is granted at most once. */
+  questsDone: QuestRef[]
   unlocked: UnlockedAchievement[]
   settings: Settings
   /** True once the user has finished onboarding. */

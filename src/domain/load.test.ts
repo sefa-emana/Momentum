@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   acuteLoad,
   chronicLoad,
+  countComebacks,
   dailyLoads,
   loadRatio,
   loadTrend,
@@ -12,6 +13,7 @@ import {
   strain,
   strengthSessionsThisWeek,
   weeklyWhoPoints,
+  whoWeeksMet,
 } from './load'
 import { makeWorkout, dayOffset } from './testHelpers'
 
@@ -206,5 +208,57 @@ describe('monotonyStatus', () => {
   it('is none when monotony is low', () => {
     const w = [0, 1, 2].map((d) => makeWorkout(dayOffset(BASE, d), { durationMin: 30 }))
     expect(monotonyStatus(w, dayOffset(BASE, 6))).toBe('none')
+  })
+})
+
+describe('whoWeeksMet', () => {
+  it('counts distinct ISO weeks that reached the 150-point target', () => {
+    const workouts = [
+      // Week 1: 150 points (moderate 90 min + vigorous 30 min) → met.
+      makeWorkout(dayOffset(BASE, 0), { intensity: 'moderate', durationMin: 90 }),
+      makeWorkout(dayOffset(BASE, 1), { intensity: 'vigorous', durationMin: 30 }),
+      // Week 3: only 40 points → not met.
+      makeWorkout(dayOffset(BASE, 14), { intensity: 'moderate', durationMin: 40 }),
+      // Week 5: 200 points → met.
+      makeWorkout(dayOffset(BASE, 28), { intensity: 'vigorous', durationMin: 100 }),
+    ]
+    expect(whoWeeksMet(workouts)).toBe(2)
+  })
+
+  it('is zero with no qualifying weeks', () => {
+    const workouts = [makeWorkout(BASE, { intensity: 'light', durationMin: 60 })]
+    expect(whoWeeksMet(workouts)).toBe(0)
+  })
+
+  it('accepts a custom target', () => {
+    const workouts = [makeWorkout(BASE, { intensity: 'moderate', durationMin: 60 })]
+    expect(whoWeeksMet(workouts, 50)).toBe(1)
+    expect(whoWeeksMet(workouts, 100)).toBe(0)
+  })
+})
+
+describe('countComebacks', () => {
+  it('counts gaps of at least COMEBACK_GAP_DAYS between sessions', () => {
+    const workouts = [
+      makeWorkout(dayOffset(BASE, 0)),
+      makeWorkout(dayOffset(BASE, 5)), // 5-day gap → comeback
+      makeWorkout(dayOffset(BASE, 6)), // consecutive → not
+      makeWorkout(dayOffset(BASE, 20)), // 14-day gap → comeback
+    ]
+    expect(countComebacks(workouts)).toBe(2)
+  })
+
+  it('is order-independent', () => {
+    const workouts = [
+      makeWorkout(dayOffset(BASE, 20)),
+      makeWorkout(dayOffset(BASE, 0)),
+      makeWorkout(dayOffset(BASE, 5)),
+    ]
+    expect(countComebacks(workouts)).toBe(2)
+  })
+
+  it('is zero for a single or no workout', () => {
+    expect(countComebacks([])).toBe(0)
+    expect(countComebacks([makeWorkout(BASE)])).toBe(0)
   })
 })

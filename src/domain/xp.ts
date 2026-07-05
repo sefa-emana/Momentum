@@ -46,6 +46,25 @@ export function xpForWorkout({
   return Math.max(1, Math.round(effort * factor) + momentumBonus)
 }
 
+/** Deterministic FNV-1a hash of a string → unsigned 32-bit int. */
+export function stableHash(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/**
+ * Whether a workout earns the ethical „Überraschungsbonus". Triggered by a
+ * stable hash of the (preserved) workout id ≈ 1 in 8 — deterministic and
+ * replay-safe, never `Math.random`. Always additive, never punishing.
+ */
+export function surpriseBonusFor(workoutId: string): boolean {
+  return stableHash(workoutId) % 8 === 0
+}
+
 /** Total XP required to *reach* the given level (level 1 = 0 XP). */
 export function totalXpToReachLevel(level: number): number {
   if (level <= 1) return 0

@@ -5,6 +5,16 @@
  * (see docs/PSYCHOLOGY.md). They are centralised so the mechanics can be
  * reasoned about — and tested — in one place.
  */
+import type { WorkoutType } from './types'
+
+/** All workout types, in a stable order (used by mastery + quest logic). */
+export const WORKOUT_TYPES: WorkoutType[] = [
+  'strength',
+  'cardio',
+  'mobility',
+  'sport',
+  'other',
+]
 
 // ---------------------------------------------------------------------------
 // Momentum — the core "Rückfall" (relapse) mechanic.
@@ -116,6 +126,15 @@ export const PR_BONUS_XP = 30
  *  ("schlag deine letzte Woche"). Granted at most once per ISO week and only
  *  inside the safe band (load ratio ≤ 1.5). */
 export const PROGRESS_BONUS_XP = 40
+
+/**
+ * Ethical surprise bonus (Thema 3): base XP is always guaranteed; on top, a
+ * workout *occasionally* grants a small delight. The trigger is a stable hash of
+ * the workout id (≈1 in 8), so it is replay-safe (ids are preserved) and never
+ * uses `Math.random`. Rule: variable rewards stay always-additive, never
+ * subtractive, never purchasable (Finch positive-only model).
+ */
+export const SURPRISE_BONUS_XP = 25
 
 /** Load ratio above which we consider the acute:chronic balance elevated —
  *  used both to gate bonuses and to surface a gentle plain-language nudge. The

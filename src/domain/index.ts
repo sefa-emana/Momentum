@@ -7,6 +7,8 @@ export * from './streak'
 export * from './load'
 export * from './goals'
 export * from './achievements'
+export * from './mastery'
+export * from './quests'
 export * from './stats'
 
 export const WORKOUT_TYPE_META: Record<

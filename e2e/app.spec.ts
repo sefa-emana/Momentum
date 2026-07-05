@@ -181,6 +181,32 @@ test.describe('Wave 2 — mechanics in the UI', () => {
   })
 })
 
+test.describe('Wave 3 — endgame', () => {
+  test('mastery section renders after logging a workout', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page) // default type: strength → "Kraft"
+
+    await page.getByRole('button', { name: 'Erfolge' }).click()
+    await expect(page.getByRole('heading', { name: 'Erfolge' })).toBeVisible()
+    await expect(page.getByText('Meisterschaft', { exact: true })).toBeVisible()
+    await expect(page.getByText('Kraft', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Level 1/).first()).toBeVisible()
+  })
+
+  test('a weekly quest can be accepted and shows live progress', async ({ page }) => {
+    await onboard(page)
+
+    await page.getByRole('button', { name: 'Erfolge' }).click()
+    await expect(page.getByText('Quests der Woche')).toBeVisible()
+
+    const accept = page.getByRole('button', { name: 'Annehmen' }).first()
+    await expect(accept).toBeVisible()
+    await accept.click()
+
+    await expect(page.getByText('Angenommen').first()).toBeVisible()
+  })
+})
+
 test('has PWA manifest and service worker registration', async ({ page }) => {
   await page.goto(APP_URL)
   const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href')

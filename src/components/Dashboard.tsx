@@ -15,13 +15,14 @@ import {
   Zap,
 } from 'lucide-react'
 import { useStore } from '../state/store'
-import { useDerived } from '../ui/hooks'
+import { useDerived, useNow } from '../ui/hooks'
 import { MomentumRing } from './MomentumRing'
 import { MiniBarChart } from './MiniBarChart'
 import {
   TIER_META,
   WHO_WEEKLY_POINTS_TARGET,
   WHO_WEEKLY_STRENGTH_TARGET,
+  almostCompleteQuest,
 } from '../domain'
 import { ICON_STROKE } from '../ui/icons'
 import { Ticker } from '../ui/Ticker'
@@ -49,19 +50,26 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
   const name = useStore((s) => s.settings.name)
   const setWeeklyGoal = useStore((s) => s.setWeeklyGoal)
   const endPause = useStore((s) => s.endPause)
+  const workouts = useStore((s) => s.workouts)
+  const acceptedQuests = useStore((s) => s.acceptedQuests)
+  const questsDone = useStore((s) => s.questsDone)
+  const now = useNow()
   const d = useDerived()
+  const almostQuest = almostCompleteQuest(acceptedQuests, questsDone, workouts, now)
   const tierMeta = TIER_META[d.momentumTier]
   const greeting = getGreeting()
 
   const [dismissedWeek, setDismissedWeek] = useState<string | null>(() => readGoalDismiss())
   const goalDismissed = dismissedWeek === d.week.weekKey
 
-  // Nudge system — at most ONE, priority: overreach → monotony → adaptive goal.
-  type Nudge = 'overreach' | 'monotony' | 'goal'
+  // Nudge system — at most ONE, priority: overreach → monotony → adaptive goal
+  // → quest-almost-done (lowest, purely encouraging).
+  type Nudge = 'overreach' | 'monotony' | 'goal' | 'quest'
   let nudge: Nudge | null = null
   if (d.overreach === 'elevated') nudge = 'overreach'
   else if (d.monotony === 'samey') nudge = 'monotony'
   else if (d.goalSuggestion.reason !== 'keep' && !goalDismissed) nudge = 'goal'
+  else if (almostQuest) nudge = 'quest'
 
   const applyGoal = () => setWeeklyGoal(d.goalSuggestion.suggestion)
   const dismissGoal = () => {
@@ -167,6 +175,11 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
           <NudgeCard icon={<Shuffle size={20} strokeWidth={ICON_STROKE} aria-hidden />} title="Zeit für Abwechslung">
             Deine Einheiten ähneln sich zuletzt stark. Ein leichterer Tag oder eine
             neue Trainingsart hält dich frisch.
+          </NudgeCard>
+        )}
+        {nudge === 'quest' && almostQuest && (
+          <NudgeCard icon={<Target size={20} strokeWidth={ICON_STROKE} aria-hidden />} title="Quest fast geschafft">
+            {`Nur noch eine passende Einheit für „${almostQuest.title}" — du hast es fast.`}
           </NudgeCard>
         )}
         {nudge === 'goal' && (

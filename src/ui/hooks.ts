@@ -60,6 +60,8 @@ export function useDerived(): DerivedState {
   const goalMetWeeks = useStore((s) => s.goalMetWeeks)
   const progressWeeks = useStore((s) => s.progressWeeks)
   const pauses = useStore((s) => s.pauses)
+  const acceptedQuests = useStore((s) => s.acceptedQuests)
+  const questsDone = useStore((s) => s.questsDone)
   const unlocked = useStore((s) => s.unlocked)
   const settings = useStore((s) => s.settings)
   const createdAt = useStore((s) => s.createdAt)
@@ -75,6 +77,8 @@ export function useDerived(): DerivedState {
       goalMetWeeks,
       progressWeeks,
       pauses,
+      acceptedQuests,
+      questsDone,
       unlocked,
       settings,
       onboarded,

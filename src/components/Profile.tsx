@@ -64,6 +64,8 @@ export function Profile() {
       goalMetWeeks: state.goalMetWeeks,
       progressWeeks: state.progressWeeks,
       pauses: state.pauses,
+      acceptedQuests: state.acceptedQuests,
+      questsDone: state.questsDone,
       unlocked: state.unlocked,
       settings: state.settings,
       onboarded: state.onboarded,
@@ -84,7 +86,13 @@ export function Profile() {
       try {
         const parsed = JSON.parse(String(reader.result)) as AppState
         if (!Array.isArray(parsed.workouts)) throw new Error('invalid')
-        importState({ ...parsed, onboarded: true })
+        importState({
+          ...parsed,
+          // Tolerate backups from before the endgame fields existed.
+          acceptedQuests: parsed.acceptedQuests ?? [],
+          questsDone: parsed.questsDone ?? [],
+          onboarded: true,
+        })
         setStatus('Daten importiert.')
       } catch {
         setStatus('Import fehlgeschlagen — ungültige Datei.')

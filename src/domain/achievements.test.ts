@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ACHIEVEMENTS,
+  EMPTY_ACHIEVEMENT_EXTRAS,
   newlyUnlocked,
   satisfiedAchievements,
   type AchievementContext,
@@ -19,6 +20,7 @@ function ctx(overrides: Partial<AchievementContext> = {}): AchievementContext {
     weeklyGoalsMet: 0,
     distinctTypesThisWeek: 0,
     workouts: [],
+    ...EMPTY_ACHIEVEMENT_EXTRAS,
     ...overrides,
   }
 }
@@ -75,6 +77,58 @@ describe('satisfiedAchievements', () => {
       makeWorkout(dayOffset(BASE, 1)),
     ]
     expect(satisfiedAchievements(ctx({ workouts }))).not.toContain('comeback')
+  })
+})
+
+describe('Wave 3 tiered awards', () => {
+  it('unlocks the higher workout milestones', () => {
+    expect(satisfiedAchievements(ctx({ totalWorkouts: 250 }))).toContain('workouts-250')
+    expect(satisfiedAchievements(ctx({ totalWorkouts: 250 }))).not.toContain('workouts-500')
+    expect(satisfiedAchievements(ctx({ totalWorkouts: 500 }))).toEqual(
+      expect.arrayContaining(['workouts-250', 'workouts-500']),
+    )
+  })
+
+  it('unlocks the long streak and level tiers', () => {
+    expect(satisfiedAchievements(ctx({ longestStreak: 60 }))).toContain('streak-60')
+    expect(satisfiedAchievements(ctx({ longestStreak: 100 }))).toContain('streak-100')
+    expect(satisfiedAchievements(ctx({ level: 20 }))).toContain('level-20')
+    expect(satisfiedAchievements(ctx({ level: 30 }))).toContain('level-30')
+    expect(satisfiedAchievements(ctx({ level: 19 }))).not.toContain('level-20')
+  })
+
+  it('unlocks WHO-week awards from whoWeeksMet', () => {
+    expect(satisfiedAchievements(ctx({ whoWeeksMet: 1 }))).toContain('who-week')
+    expect(satisfiedAchievements(ctx({ whoWeeksMet: 1 }))).not.toContain('who-weeks-10')
+    expect(satisfiedAchievements(ctx({ whoWeeksMet: 10 }))).toEqual(
+      expect.arrayContaining(['who-week', 'who-weeks-10']),
+    )
+  })
+
+  it('unlocks the progress-weeks award', () => {
+    expect(satisfiedAchievements(ctx({ progressWeeksCount: 5 }))).toContain('progress-weeks-5')
+    expect(satisfiedAchievements(ctx({ progressWeeksCount: 4 }))).not.toContain('progress-weeks-5')
+  })
+
+  it('unlocks the personal-record tiers from prCount', () => {
+    expect(satisfiedAchievements(ctx({ prCount: 5 }))).toContain('pr-5')
+    expect(satisfiedAchievements(ctx({ prCount: 5 }))).not.toContain('pr-20')
+    expect(satisfiedAchievements(ctx({ prCount: 20 }))).toEqual(
+      expect.arrayContaining(['pr-5', 'pr-20']),
+    )
+  })
+
+  it('unlocks the mastery awards from mastery5Count', () => {
+    expect(satisfiedAchievements(ctx({ mastery5Count: 1 }))).toContain('mastery-5-any')
+    expect(satisfiedAchievements(ctx({ mastery5Count: 1 }))).not.toContain('mastery-5-three')
+    expect(satisfiedAchievements(ctx({ mastery5Count: 3 }))).toEqual(
+      expect.arrayContaining(['mastery-5-any', 'mastery-5-three']),
+    )
+  })
+
+  it('unlocks the comeback-count award', () => {
+    expect(satisfiedAchievements(ctx({ comebackCount: 3 }))).toContain('comeback-3')
+    expect(satisfiedAchievements(ctx({ comebackCount: 2 }))).not.toContain('comeback-3')
   })
 })
 

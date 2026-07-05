@@ -9,16 +9,27 @@
 import {
   Activity,
   Award,
+  CalendarCheck,
+  Crosshair,
+  Crown,
   Dumbbell,
   Flame,
+  Gem,
+  Heart,
+  HeartPulse,
   Medal,
+  Mountain,
+  MountainSnow,
+  Repeat,
   Rocket,
   RotateCcw,
+  Shuffle,
   Sparkles,
   Sprout,
   Star,
   StretchHorizontal,
   Target,
+  TrendingUp,
   Trophy,
   Volleyball,
   Wind,
@@ -69,8 +80,37 @@ const ACHIEVEMENT_ICON: Record<string, LucideIcon> = {
   comeback: RotateCcw,
   'all-rounder': Target,
   'goal-getter': Award,
+  // --- Wave 3: tiered long-term awards ---
+  'workouts-250': Mountain,
+  'workouts-500': MountainSnow,
+  'streak-60': Flame,
+  'streak-100': Zap,
+  'level-20': Gem,
+  'level-30': Crown,
+  'who-week': Heart,
+  'who-weeks-10': HeartPulse,
+  'progress-weeks-5': TrendingUp,
+  'pr-5': Target,
+  'pr-20': Crosshair,
+  'mastery-5-any': Medal,
+  'mastery-5-three': Award,
+  'comeback-3': Repeat,
 }
 
 export function achievementIcon(id: string): LucideIcon {
   return ACHIEVEMENT_ICON[id] ?? Trophy
+}
+
+/** Icon per weekly-quest id (Wave 3). */
+const QUEST_ICON: Record<string, LucideIcon> = {
+  variety3: Shuffle,
+  active4: CalendarCheck,
+  who150: Heart,
+  mobility2: StretchHorizontal,
+  strength2: Dumbbell,
+  light1: Wind,
+}
+
+export function questIcon(id: string): LucideIcon {
+  return QUEST_ICON[id] ?? Target
 }
