@@ -111,6 +111,21 @@ test.describe('Persistence', () => {
 
     await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
   })
+
+  test('survives a localStorage wipe — IndexedDB is authoritative', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+    await logWorkout(page)
+
+    // Wipe only the secondary localStorage snapshot; the durable IndexedDB copy
+    // must still rehydrate the full state on reload (the whole point of Wave 4).
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
+    // And onboarding must NOT reappear (state truly restored from IndexedDB).
+    await expect(page.getByTestId('stat-total-workouts')).toBeVisible()
+  })
 })
 
 test.describe('Achievements screen', () => {
@@ -216,4 +231,6 @@ test('has PWA manifest and service worker registration', async ({ page }) => {
   const manifest = await res.json()
   expect(manifest.name).toContain('Momentum')
   expect(manifest.icons.length).toBeGreaterThan(0)
+  // Wave 4: "Training loggen" app shortcut deep-links into the log sheet.
+  expect(manifest.shortcuts?.[0]?.url).toContain('action=log')
 })

@@ -7,7 +7,8 @@
  * source of truth and makes the mechanics reproducible.
  */
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { idbStorage } from './idbStorage'
 import {
   DEFAULT_WEEKLY_GOAL,
   PR_BONUS_XP,
@@ -30,6 +31,7 @@ import {
   offeredQuests,
   overreachStatus,
   surpriseBonusFor,
+  toEpoch,
   totalXp as sumWorkoutXp,
   typesAtMasteryLevel,
   weeklyWhoPoints,
@@ -111,6 +113,8 @@ interface StoreActions {
   setWeeklyGoal: (n: number) => void
   setName: (name: string) => void
   setReducedMotion: (v: boolean) => void
+  /** Record that the user just exported their data (backup-freshness nudge). */
+  markBackup: () => void
   completeOnboarding: (name: string, weeklyGoal: number) => void
   /** Opt into a weekly quest offered this ISO week (at most 2 per week). */
   acceptQuest: (id: string) => void
@@ -362,9 +366,7 @@ export function rebuildFromWorkouts(
   >,
   workouts: Workout[],
 ): AppState {
-  const sorted = [...workouts].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  )
+  const sorted = [...workouts].sort((a, b) => toEpoch(a.date) - toEpoch(b.date))
 
   // Pauses and accepted quests are raw user facts, not derived accumulators —
   // carry them through so the replay computes momentum/streaks/quests against
@@ -439,6 +441,10 @@ export const useStore = create<Store>()(
         set((s) => ({ settings: { ...s.settings, reducedMotion: v } }))
       },
 
+      markBackup: () => {
+        set((s) => ({ settings: { ...s.settings, lastBackupAt: nowIso() } }))
+      },
+
       completeOnboarding: (name, weeklyGoal) => {
         set((s) => ({
           onboarded: true,
@@ -494,6 +500,10 @@ export const useStore = create<Store>()(
     {
       name: STORAGE_KEY,
       version: STATE_VERSION,
+      // Durable, eviction-resistant storage (IndexedDB) with a transparent
+      // one-time migration from the legacy localStorage snapshot — see
+      // idbStorage.ts. Same key + same migrate chain, so both layers match.
+      storage: createJSONStorage(() => idbStorage),
       migrate: (persisted, version) => migratePersisted(persisted, version),
       partialize: (s) => ({
         version: s.version,

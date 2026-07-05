@@ -18,7 +18,7 @@ import {
   WHO_POINTS_PER_MIN,
   WHO_WEEKLY_POINTS_TARGET,
 } from './constants'
-import { dayKey, daysBetween, isInThisWeek, toDate, weekKey } from './dates'
+import { dayKey, daysBetween, isInThisWeek, toDate, toEpoch, weekKey } from './dates'
 import type { Workout } from './types'
 
 /** Foster session load for a single workout (AU). Uses the post-session `feel`
@@ -148,9 +148,7 @@ export function whoWeeksMet(
 /** Number of comebacks in the history: gaps of ≥ COMEBACK_GAP_DAYS days between
  *  consecutive workouts. Pure/derivable for the comeback-count achievement. */
 export function countComebacks(workouts: Workout[]): number {
-  const sorted = [...workouts].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  )
+  const sorted = [...workouts].sort((a, b) => toEpoch(a.date) - toEpoch(b.date))
   let n = 0
   for (let i = 1; i < sorted.length; i++) {
     if (daysBetween(sorted[i - 1].date, sorted[i].date) >= COMEBACK_GAP_DAYS) n += 1

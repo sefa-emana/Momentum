@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
-import { Check, Flame, Heart, Sparkles, Star, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { Check, Flame, Heart, Share2, Sparkles, Star, Target, TrendingUp, Trophy, Zap } from 'lucide-react'
 import type { WorkoutReward } from '../state/store'
 import { achievementIcon, ICON_STROKE } from '../ui/icons'
 import { Ticker } from '../ui/Ticker'
 import { Confetti } from '../ui/Confetti'
+import { renderAchievementCard, shareImage } from '../ui/shareCard'
 
 /**
  * Immediate, celebratory feedback after logging — the "emotional glue" that
@@ -37,6 +38,20 @@ export function RewardOverlay({
     : null
 
   const HeroIcon = reward.leveledUp ? Star : reward.isComeback ? Flame : Zap
+
+  const shareAchievement = async () => {
+    const first = reward.newAchievements[0]
+    if (!first) return
+    try {
+      const blob = await renderAchievementCard({
+        title: first.title,
+        subtitle: first.description,
+      })
+      await shareImage(blob, 'momentum-erfolg.png', `Erfolg freigeschaltet: ${first.title}`)
+    } catch {
+      /* sharing failed / cancelled — nothing to do */
+    }
+  }
   const celebrate =
     reward.leveledUp ||
     reward.newAchievements.length > 0 ||
@@ -183,6 +198,10 @@ export function RewardOverlay({
                 </motion.div>
               )
             })}
+            <button className="btn btn-block" onClick={shareAchievement}>
+              <Share2 size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              Teilen
+            </button>
           </div>
         )}
 

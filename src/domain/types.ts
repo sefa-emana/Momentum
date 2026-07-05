@@ -98,6 +98,9 @@ export interface Settings {
   /** User-facing display name. */
   name: string
   reducedMotion: boolean
+  /** ISO timestamp of the last data export ("Backup"). Undefined = never.
+   *  Drives the gentle backup-freshness nudge (data lives only on this device). */
+  lastBackupAt?: string
 }
 
 export interface AppState {

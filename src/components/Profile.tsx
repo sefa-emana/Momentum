@@ -7,6 +7,8 @@ import {
   Monitor,
   Moon,
   Play,
+  Share2,
+  ShieldAlert,
   Snowflake,
   Sparkles,
   Sun,
@@ -17,12 +19,19 @@ import { useDerived } from '../ui/hooks'
 import {
   MAX_WEEKLY_GOAL,
   MIN_WEEKLY_GOAL,
+  daysBetween,
   type AppState,
 } from '../domain'
 import { ICON_STROKE } from '../ui/icons'
 import { getTheme, setTheme, type ThemePref } from '../ui/theme'
+import { renderWeeklyRecapCard, shareImage } from '../ui/shareCard'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
+
+/** Show the backup nudge once there is meaningful data to lose. */
+const BACKUP_NUDGE_MIN_WORKOUTS = 15
+/** Backups older than this (days) are considered stale. */
+const BACKUP_STALE_DAYS = 30
 
 const THEME_OPTIONS: { id: ThemePref; label: string; Icon: typeof Monitor }[] = [
   { id: 'auto', label: 'Auto', Icon: Monitor },
@@ -37,6 +46,7 @@ export function Profile() {
   const setReducedMotion = useStore((s) => s.setReducedMotion)
   const resetAll = useStore((s) => s.resetAll)
   const importState = useStore((s) => s.importState)
+  const markBackup = useStore((s) => s.markBackup)
   const startPause = useStore((s) => s.startPause)
   const endPause = useStore((s) => s.endPause)
   const pauses = useStore((s) => s.pauses)
@@ -44,6 +54,15 @@ export function Profile() {
 
   const activePause = pauses.find((p) => p.to === null)
   const showSuggestion = d.goalSuggestion.reason !== 'keep'
+
+  // Backup-freshness nudge — only once there is meaningful data at stake, and
+  // only when no backup exists yet or the last one is stale. Calm, not alarming.
+  const backupAgeDays = settings.lastBackupAt
+    ? daysBetween(settings.lastBackupAt, new Date().toISOString())
+    : null
+  const showBackupNudge =
+    d.totalWorkouts >= BACKUP_NUDGE_MIN_WORKOUTS &&
+    (backupAgeDays === null || backupAgeDays > BACKUP_STALE_DAYS)
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState('')
@@ -77,7 +96,29 @@ export function Profile() {
     a.download = `momentum-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    markBackup()
     setStatus('Backup heruntergeladen.')
+  }
+
+  const shareRecap = async () => {
+    try {
+      setStatus('Karte wird erstellt …')
+      const blob = await renderWeeklyRecapCard({
+        name: settings.name || undefined,
+        sessions: d.week.completed,
+        whoPoints: d.weeklyWhoPoints,
+        streak: d.currentStreak,
+        momentum: d.momentum,
+      })
+      const result = await shareImage(
+        blob,
+        'momentum-wochenrueckblick.png',
+        'Mein Momentum-Wochenrückblick',
+      )
+      setStatus(result === 'shared' ? '' : 'Karte heruntergeladen.')
+    } catch {
+      setStatus('Teilen fehlgeschlagen.')
+    }
   }
 
   const importData = (file: File) => {
@@ -244,6 +285,30 @@ export function Profile() {
             Deine Daten liegen ausschließlich lokal auf diesem Gerät. Erstelle
             ein Backup oder übertrage sie auf ein anderes Gerät.
           </p>
+          {showBackupNudge && (
+            <div
+              className="row"
+              style={{
+                gap: 10,
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'color-mix(in srgb, var(--state-rest) 12%, transparent)',
+                fontSize: 13,
+              }}
+            >
+              <ShieldAlert
+                size={16}
+                strokeWidth={ICON_STROKE}
+                style={{ color: 'var(--state-rest)', flex: 'none', marginTop: 2 }}
+                aria-hidden
+              />
+              <span>
+                {backupAgeDays === null
+                  ? 'Noch kein Backup — deine Daten liegen nur auf diesem Gerät.'
+                  : `Dein letztes Backup ist ${backupAgeDays} Tage alt — Daten liegen nur auf diesem Gerät.`}
+              </span>
+            </div>
+          )}
           <div className="row" style={{ gap: 10 }}>
             <button className="btn btn-block" onClick={exportData}>
               <Download size={18} strokeWidth={ICON_STROKE} aria-hidden />
@@ -254,6 +319,10 @@ export function Profile() {
               Import
             </button>
           </div>
+          <button className="btn btn-block" onClick={shareRecap}>
+            <Share2 size={18} strokeWidth={ICON_STROKE} aria-hidden />
+            Wochenrückblick teilen
+          </button>
           <input
             ref={fileRef}
             type="file"

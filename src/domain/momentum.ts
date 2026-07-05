@@ -29,7 +29,7 @@ import {
   SHIELD_EARN_ACTIVE_DAYS,
   SHIELD_START,
 } from './constants'
-import { daysBetween, pausedDaysBetween } from './dates'
+import { daysBetween, pausedDaysBetween, toEpoch } from './dates'
 import type { MomentumTier, Pause, Workout } from './types'
 
 /** Points lost after `inactiveDays` days without a workout. */
@@ -85,9 +85,7 @@ function foldMomentum(
   pauses: Pause[],
   now: string | Date,
 ): MomentumDetail {
-  const sorted = [...workouts].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  )
+  const sorted = [...workouts].sort((a, b) => toEpoch(a.date) - toEpoch(b.date))
 
   let momentum = 0
   let prevDate: string | null = null

@@ -201,7 +201,7 @@ per Zustand-in-URL/QR-Code. Kein Bestandteil der aktuellen Wellen.
 | **1b** | Design-Foundation: Token-System (Dark/Light + Glass), Lucide-Icons, Typo, Tab-Bar-Pille | ✅ fertig |
 | **2** | UI-Features: Dashboard-Karten (Woche/Fortschritt/Nudges), Log-Sheet mit RPE-Tap/PR/Stimmung, Heatmap, Reward-Upgrade, Ticker, Pause-UI | ✅ fertig |
 | **3** | Endgame: Mastery-Tracks, Quests, Achievements-Ausbau, Überraschungsbonus (Saisons bewusst zurückgestellt — Goldilocks-Prinzip) | ✅ fertig |
-| **4** | Plattform: IndexedDB-Migration, Badging, Share-Cards, Shortcuts, Perf | offen |
+| **4** | Plattform: IndexedDB-Migration, Badging, Share-Cards, Shortcuts, Perf | ✅ fertig |
 
 Jede Welle: Opus-Worker implementieren, Review + Verifikation (Tests, Build,
 E2E) vor dem Merge. `docs/PSYCHOLOGY.md` wird mit jeder Mechanik-Änderung
