@@ -6,6 +6,7 @@ import { useAppBadge, useStoreHydrated } from './ui/hooks'
 import { Onboarding } from './components/Onboarding'
 import { Dashboard } from './components/Dashboard'
 import { History } from './components/History'
+import { Progress } from './components/Progress'
 import { Achievements } from './components/Achievements'
 import { Profile } from './components/Profile'
 import { BottomNav, type Tab } from './components/BottomNav'
@@ -55,8 +56,11 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {tab === 'home' && <Dashboard onLog={() => setLogOpen(true)} />}
+      {tab === 'home' && (
+        <Dashboard onLog={() => setLogOpen(true)} onOpenProgress={() => setTab('progress')} />
+      )}
       {tab === 'history' && <History />}
+      {tab === 'progress' && <Progress />}
       {tab === 'achievements' && <Achievements />}
       {tab === 'profile' && <Profile />}
 

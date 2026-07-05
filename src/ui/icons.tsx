@@ -63,6 +63,7 @@ export const INTENSITY_ICON: Record<Intensity, { Icon: LucideIcon; color: string
 export const TAB_ICON: Record<Tab, LucideIcon> = {
   home: Home,
   history: History,
+  progress: TrendingUp,
   achievements: Medal,
   profile: User,
 }

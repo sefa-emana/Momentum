@@ -646,6 +646,257 @@ function dayKeyOf(date: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Fortschritts-Screens — per-exercise progress view models (all pure)
+// ---------------------------------------------------------------------------
+
+export interface WeeklyValue {
+  week: string
+  value: number
+}
+
+/** Total working-set volume load per ISO week for an exercise (ascending). */
+export function weeklyVolumeLoad(
+  workouts: Workout[],
+  exerciseId: string,
+  customExercises: ExerciseDef[] = [],
+): WeeklyValue[] {
+  void customExercises // volume is definition-independent; kept for a symmetric signature
+  const byWeek = new Map<string, number>()
+  for (const w of sessionsForExercise(workouts, exerciseId)) {
+    const vol = volumeLoad(workingSetsFor(w, exerciseId))
+    if (vol <= 0) continue
+    const k = weekKey(w.date)
+    byWeek.set(k, (byWeek.get(k) ?? 0) + vol)
+  }
+  return [...byWeek.entries()]
+    .map(([week, value]) => ({ week, value }))
+    .sort((a, b) => (a.week < b.week ? -1 : a.week > b.week ? 1 : 0))
+}
+
+/** Total cardio minutes per ISO week over the trailing `weeks` weeks (oldest
+ *  first, including empty weeks) — the cardio duration-trend sparkline series. */
+export function weeklyCardioMinutes(
+  workouts: Workout[],
+  now: string | Date,
+  weeks = 8,
+): WeeklyValue[] {
+  const byWeek = new Map<string, number>()
+  for (const w of workouts) {
+    if (w.type !== 'cardio') continue
+    const k = weekKey(w.date)
+    byWeek.set(k, (byWeek.get(k) ?? 0) + w.durationMin)
+  }
+  const out: WeeklyValue[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const key = weekKey(addDays(toDate(now), -7 * i))
+    out.push({ week: key, value: byWeek.get(key) ?? 0 })
+  }
+  return out
+}
+
+export interface PRRecord {
+  value: number
+  /** ISO date of the session where this record was first set. */
+  date: string
+}
+
+/** All-time personal records for one exercise, each with the date first hit. */
+export interface ExercisePRs {
+  /** Heaviest working-set load (kg). */
+  weight?: PRRecord
+  /** Most reps in a single working set, plus the load it was done at. */
+  reps?: (PRRecord & { weightKg: number })
+  /** Best Epley e1RM (external load only). */
+  e1rm?: PRRecord
+  /** Best single-session volume load. */
+  volume?: PRRecord
+}
+
+export function exercisePRs(
+  workouts: Workout[],
+  exerciseId: string,
+  customExercises: ExerciseDef[] = [],
+): ExercisePRs {
+  const def = resolveExercise(exerciseId, customExercises)
+  const out: ExercisePRs = {}
+  for (const w of sessionsForExercise(workouts, exerciseId)) {
+    const sets = workingSetsFor(w, exerciseId)
+    if (sets.length === 0) continue
+
+    for (const s of sets) {
+      if (s.weightKg !== undefined && s.weightKg > 0) {
+        if (!out.weight || s.weightKg > out.weight.value) {
+          out.weight = { value: s.weightKg, date: w.date }
+        }
+      }
+      if (s.reps !== undefined && s.reps > 0) {
+        if (!out.reps || s.reps > out.reps.value) {
+          out.reps = { value: s.reps, weightKg: s.weightKg ?? 0, date: w.date }
+        }
+      }
+    }
+
+    const e = bestE1RM(sets, def)
+    if (e !== null && (!out.e1rm || e > out.e1rm.value)) {
+      out.e1rm = { value: e, date: w.date }
+    }
+
+    const vol = volumeLoad(sets)
+    if (vol > 0 && (!out.volume || vol > out.volume.value)) {
+      out.volume = { value: vol, date: w.date }
+    }
+  }
+  return out
+}
+
+/** One compact recent-session row for the exercise detail history. */
+export interface ExerciseSessionRow {
+  date: string
+  workingSets: number
+  volume: number
+  /** Best e1RM this session (external loads), else null. */
+  e1rm: number | null
+}
+
+/** The last `count` sessions for an exercise (most recent first). */
+export function recentExerciseSessions(
+  workouts: Workout[],
+  exerciseId: string,
+  customExercises: ExerciseDef[] = [],
+  count = 5,
+): ExerciseSessionRow[] {
+  const def = resolveExercise(exerciseId, customExercises)
+  return sessionsForExercise(workouts, exerciseId)
+    .slice()
+    .reverse()
+    .slice(0, count)
+    .map((w) => {
+      const sets = workingSetsFor(w, exerciseId)
+      return {
+        date: w.date,
+        workingSets: sets.length,
+        volume: volumeLoad(sets),
+        e1rm: bestE1RM(sets, def),
+      }
+    })
+}
+
+/** Summary row for the Fortschritt exercise list. */
+export interface ExerciseProgress {
+  exerciseId: string
+  name: string
+  /** ISO date of the most recent session for this exercise. */
+  lastDate: string
+  /** Whether e1RM is the meaningful headline metric (external load). */
+  external: boolean
+  /** Weekly best e1RM (sparkline source) for external loads. */
+  weeklyE1RM: WeeklyE1RM[]
+  /** Weekly volume load (sparkline source), used for bodyweight etc. */
+  weeklyVolume: WeeklyValue[]
+  /** Best all-time e1RM (external) or null. */
+  bestE1RM: number | null
+  /** Best all-time single-session volume load. */
+  bestVolume: number
+  stall: StallState
+  sessionCount: number
+}
+
+/**
+ * Every strength exercise with at least one logged working set, sorted by most
+ * recent session first — the Fortschritt tab's list model. Bodyweight/isolation
+ * exercises (no meaningful e1RM) fall back to volume as their headline metric.
+ */
+export function exerciseProgressList(
+  workouts: Workout[],
+  customExercises: ExerciseDef[] = [],
+  now: string | Date = new Date(),
+): ExerciseProgress[] {
+  void now
+  const ids = new Set<string>()
+  for (const w of workouts) {
+    if (!w.entries) continue
+    for (const entry of w.entries) {
+      if (entry.sets.some(isWorkingSet)) ids.add(entry.exerciseId)
+    }
+  }
+
+  const out: ExerciseProgress[] = []
+  for (const id of ids) {
+    const def = resolveExercise(id, customExercises)
+    if (!def || def.category !== 'strength') continue
+    const sessions = sessionsForExercise(workouts, id)
+    if (sessions.length === 0) continue
+
+    const prs = exercisePRs(workouts, id, customExercises)
+    out.push({
+      exerciseId: id,
+      name: def.name,
+      lastDate: sessions[sessions.length - 1].date,
+      external: def.loadType === 'external',
+      weeklyE1RM: weeklyBestE1RM(workouts, id, customExercises),
+      weeklyVolume: weeklyVolumeLoad(workouts, id, customExercises),
+      bestE1RM: prs.e1rm?.value ?? null,
+      bestVolume: prs.volume?.value ?? 0,
+      stall: stallState(workouts, id, customExercises),
+      sessionCount: sessions.length,
+    })
+  }
+
+  return out.sort((a, b) => toEpoch(b.lastDate) - toEpoch(a.lastDate))
+}
+
+/** A single, most-relevant progress line for the Dashboard's Fortschritt card. */
+export interface ProgressHeadline {
+  exerciseId: string
+  name: string
+  /** One-line German summary (e.g. "Bankdrücken: bereit für +2,5 kg"). */
+  text: string
+  tone: 'ready' | 'stall'
+}
+
+/**
+ * Pick the single most relevant strength headline for the Dashboard:
+ * a stalled exercise (with its de-stall nudge) outranks one that is ready for a
+ * load bump. Returns null when neither applies → the Dashboard keeps its
+ * existing "beat last week" load framing.
+ */
+export function topProgressHeadline(
+  workouts: Workout[],
+  customExercises: ExerciseDef[] = [],
+  now: string | Date = new Date(),
+): ProgressHeadline | null {
+  const list = exerciseProgressList(workouts, customExercises, now)
+  if (list.length === 0) return null
+
+  // 1) A genuine stall (calm, actionable) takes priority.
+  const stalled = list.find((e) => e.stall === 'stalled')
+  if (stalled) {
+    return {
+      exerciseId: stalled.exerciseId,
+      name: stalled.name,
+      text: `${stalled.name}: festgefahren — Zeit für einen neuen Reiz`,
+      tone: 'stall',
+    }
+  }
+
+  // 2) Otherwise, the first exercise that is ready for more weight.
+  for (const e of list) {
+    const hint = progressionHint(workouts, e.exerciseId, customExercises)
+    if (hint?.action === 'addWeight') {
+      const amount = hint.amountKg.toLocaleString('de-DE', { maximumFractionDigits: 2 })
+      return {
+        exerciseId: e.exerciseId,
+        name: e.name,
+        text: `${e.name}: bereit für +${amount} kg`,
+        tone: 'ready',
+      }
+    }
+  }
+
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Ghost-beat & ego-lift helpers (shared with the XP integration in the store)
 // ---------------------------------------------------------------------------
 

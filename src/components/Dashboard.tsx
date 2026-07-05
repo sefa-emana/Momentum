@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import {
+  ChevronRight,
   Check,
   Dumbbell,
   Flame,
@@ -23,6 +24,7 @@ import {
   WHO_WEEKLY_POINTS_TARGET,
   WHO_WEEKLY_STRENGTH_TARGET,
   almostCompleteQuest,
+  topProgressHeadline,
 } from '../domain'
 import { ICON_STROKE } from '../ui/icons'
 import { Ticker } from '../ui/Ticker'
@@ -46,15 +48,17 @@ function writeGoalDismiss(week: string): void {
   }
 }
 
-export function Dashboard({ onLog }: { onLog: () => void }) {
+export function Dashboard({ onLog, onOpenProgress }: { onLog: () => void; onOpenProgress: () => void }) {
   const name = useStore((s) => s.settings.name)
   const setWeeklyGoal = useStore((s) => s.setWeeklyGoal)
   const endPause = useStore((s) => s.endPause)
   const workouts = useStore((s) => s.workouts)
+  const customExercises = useStore((s) => s.customExercises)
   const acceptedQuests = useStore((s) => s.acceptedQuests)
   const questsDone = useStore((s) => s.questsDone)
   const now = useNow()
   const d = useDerived()
+  const progressHeadline = topProgressHeadline(workouts, customExercises, now)
   const almostQuest = almostCompleteQuest(acceptedQuests, questsDone, workouts, now)
   const tierMeta = TIER_META[d.momentumTier]
   const greeting = getGreeting()
@@ -255,16 +259,34 @@ export function Dashboard({ onLog }: { onLog: () => void }) {
         </div>
 
         {/* Fortschritt — beat your own last week (relative, never raw AU). */}
-        <div className="card stack" style={{ gap: 12 }}>
+        <button className="card stack fortschritt-card" style={{ gap: 12 }} onClick={onOpenProgress} aria-label="Fortschritt öffnen">
           <div className="row-between">
             <strong className="row" style={{ gap: 8 }}>
               <TrendingUp size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--accent)' }} aria-hidden />
               Fortschritt
             </strong>
+            <ChevronRight size={18} strokeWidth={ICON_STROKE} style={{ color: 'var(--text-faint)' }} aria-hidden />
           </div>
-          <Sparkline data={d.load14} label="Trainingslast der letzten 14 Tage" height={36} />
-          <ProgressLine thisWeek={d.loadTrend.thisWeek} lastWeek={d.loadTrend.lastWeek} />
-        </div>
+          {progressHeadline ? (
+            <div
+              className="progress-hint"
+              data-tone={progressHeadline.tone === 'stall' ? 'hold' : undefined}
+              style={{ textAlign: 'left' }}
+            >
+              {progressHeadline.tone === 'stall' ? (
+                <Shuffle size={16} strokeWidth={ICON_STROKE} className="progress-hint-icon" aria-hidden />
+              ) : (
+                <TrendingUp size={16} strokeWidth={ICON_STROKE} className="progress-hint-icon" aria-hidden />
+              )}
+              <div className="progress-hint-title" style={{ fontWeight: 600 }}>{progressHeadline.text}</div>
+            </div>
+          ) : (
+            <>
+              <Sparkline data={d.load14} label="Trainingslast der letzten 14 Tage" height={36} />
+              <ProgressLine thisWeek={d.loadTrend.thisWeek} lastWeek={d.loadTrend.lastWeek} />
+            </>
+          )}
+        </button>
 
         {/* Stat tiles */}
         <div className="grid-2">

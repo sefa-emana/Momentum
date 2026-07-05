@@ -320,6 +320,57 @@ test.describe('Logging-UX v2 — Satz-Modus & editing', () => {
   })
 })
 
+test.describe('Fortschritt tab', () => {
+  /** Log one Bankdrücken strength session via Satz-Modus (two confirmed sets). */
+  async function logBench(page: import('@playwright/test').Page) {
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    await expect(page.getByRole('dialog', { name: 'Training loggen' })).toBeVisible()
+    await page.getByTestId('add-exercise').click()
+    await expect(page.getByRole('dialog', { name: 'Übung wählen' })).toBeVisible()
+    await page.getByLabel('Übung suchen').fill('Bankdr')
+    await page.getByRole('button', { name: /^Bankdrücken/ }).first().click()
+    await page.getByRole('button', { name: 'Satz 1 bestätigen' }).click()
+    await page.getByRole('button', { name: 'Satz', exact: true }).click()
+    await page.getByRole('button', { name: 'Satz 2 bestätigen' }).click()
+    await page.getByTestId('submit-workout').click()
+    const reward = page.getByRole('dialog', { name: 'Belohnung' })
+    await expect(reward).toBeVisible()
+    await reward.getByRole('button', { name: 'Weiter' }).click()
+    await expect(reward).toBeHidden()
+  }
+
+  test('lists a logged strength exercise and opens its detail with a chart', async ({ page }) => {
+    await onboard(page)
+    await logBench(page)
+    await logBench(page)
+
+    await page.getByRole('button', { name: 'Fortschritt', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Fortschritt' })).toBeVisible()
+
+    // Pattern balance renders (Drücken from Bankdrücken).
+    await expect(page.getByText('Muster-Balance · diese Woche')).toBeVisible()
+    await expect(page.getByText('Drücken').first()).toBeVisible()
+
+    // The exercise appears in the list; tapping it opens the detail sheet.
+    const row = page.getByRole('button', { name: 'Bankdrücken — Details' })
+    await expect(row).toBeVisible()
+    await row.click()
+
+    const detail = page.getByRole('dialog', { name: /Bankdrücken — Fortschritt/ })
+    await expect(detail).toBeVisible()
+    await expect(detail.getByText('Bestwerte')).toBeVisible()
+    await expect(detail.getByText('Letzte Einheiten')).toBeVisible()
+  })
+
+  test('the Dashboard Fortschritt card links to the tab', async ({ page }) => {
+    await onboard(page)
+    await logBench(page)
+
+    await page.getByRole('button', { name: 'Fortschritt öffnen' }).click()
+    await expect(page.getByRole('heading', { name: 'Fortschritt' })).toBeVisible()
+  })
+})
+
 test('has PWA manifest and service worker registration', async ({ page }) => {
   await page.goto(APP_URL)
   const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href')

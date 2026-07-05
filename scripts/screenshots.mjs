@@ -369,6 +369,18 @@ async function main() {
     await page.getByRole('dialog', { name: 'Einheit bearbeiten' }).waitFor({ timeout: 10_000 })
     await page.waitForTimeout(500)
     await shoot(page, '08-edit-workout')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+
+    // 09 — Fortschritt tab: exercise list with e1RM sparklines + pattern balance.
+    await openTab(page, 'Fortschritt')
+    await page.waitForTimeout(700)
+    await shoot(page, '09-fortschritt')
+
+    // 10 — Exercise detail: e1RM trend, volume, Bestwerte, progression hint.
+    await page.getByRole('button', { name: /^Bankdrücken/ }).first().click()
+    await page.waitForTimeout(700)
+    await shoot(page, '10-uebung-detail')
     await light.close()
 
     // ---- Dark theme: the de-blued graphite secondary option. ----

@@ -8,15 +8,21 @@ import {
   e1rmForSet,
   egoLiftExercises,
   epley1RM,
+  exercisePRs,
+  exerciseProgressList,
   ghostBeats,
   progressionHint,
+  recentExerciseSessions,
   stallState,
   stallSuggestion,
+  topProgressHeadline,
   volumeLoad,
   weeklyBestE1RM,
+  weeklyCardioMinutes,
   weeklySetsByPattern,
+  weeklyVolumeLoad,
 } from './progression'
-import { makeWorkout } from './testHelpers'
+import { dayOffset, makeWorkout } from './testHelpers'
 import type { SetEntry, Workout } from './types'
 
 const BASE = '2026-06-01' // Monday
@@ -326,5 +332,99 @@ describe('ghostBeats + egoLift', () => {
     // A clean +2.5 kg jump is not.
     const clean = wk(7, 'bench-press', [set(102.5, 5)])
     expect(egoLiftExercises(prior, clean).has('bench-press')).toBe(false)
+  })
+})
+
+describe('Fortschritts-Screens view models', () => {
+  it('weeklyVolumeLoad sums working-set volume per ISO week', () => {
+    const workouts = [
+      wk(0, 'bench-press', [set(60, 8), set(60, 8)]), // week A: 960
+      wk(3, 'bench-press', [set(60, 8)]), // same week A: +480 → 1440
+      wk(7, 'bench-press', [set(62.5, 8)]), // week B: 500
+    ]
+    const weekly = weeklyVolumeLoad(workouts, 'bench-press')
+    expect(weekly.length).toBe(2)
+    expect(weekly[0].value).toBeCloseTo(1440)
+    expect(weekly[1].value).toBeCloseTo(500)
+  })
+
+  it('exercisePRs tracks weight, rep, e1RM and volume records with dates', () => {
+    const workouts = [
+      wk(0, 'bench-press', [set(60, 8)]),
+      wk(7, 'bench-press', [set(65, 5)]), // heavier weight PR here
+      wk(14, 'bench-press', [set(60, 11)]), // most reps here
+    ]
+    const prs = exercisePRs(workouts, 'bench-press')
+    expect(prs.weight?.value).toBe(65)
+    expect(prs.weight?.date).toBe(workouts[1].date)
+    expect(prs.reps?.value).toBe(11)
+    expect(prs.reps?.weightKg).toBe(60)
+    expect(prs.e1rm?.value).toBeGreaterThan(0)
+    expect(prs.volume?.value).toBeGreaterThan(0)
+  })
+
+  it('recentExerciseSessions returns the last sessions most-recent-first', () => {
+    const workouts = [
+      wk(0, 'bench-press', [set(60, 8)]),
+      wk(7, 'bench-press', [set(62.5, 8)]),
+      wk(14, 'bench-press', [set(65, 8)]),
+    ]
+    const rows = recentExerciseSessions(workouts, 'bench-press', [], 2)
+    expect(rows.length).toBe(2)
+    expect(rows[0].date).toBe(workouts[2].date)
+    expect(rows[0].workingSets).toBe(1)
+    expect(rows[0].volume).toBeCloseTo(520)
+  })
+
+  it('exerciseProgressList lists strength exercises, most recent first', () => {
+    const workouts = [
+      wk(0, 'bench-press', [set(60, 8)]),
+      wk(2, 'back-squat', [set(100, 5)]),
+      wk(9, 'bench-press', [set(62.5, 8)]),
+    ]
+    const list = exerciseProgressList(workouts)
+    expect(list.map((e) => e.exerciseId)).toEqual(['bench-press', 'back-squat'])
+    expect(list[0].external).toBe(true)
+    expect(list[0].bestE1RM).toBeGreaterThan(0)
+  })
+
+  it('exerciseProgressList uses volume for bodyweight exercises', () => {
+    const workouts = [
+      wk(0, 'push-up', [set(undefined, 20)]),
+      wk(7, 'push-up', [set(undefined, 25)]),
+    ]
+    const list = exerciseProgressList(workouts)
+    expect(list.length).toBe(1)
+    expect(list[0].external).toBe(false)
+    expect(list[0].bestE1RM).toBeNull()
+  })
+
+  it('topProgressHeadline surfaces a ready-for-weight exercise', () => {
+    // Two sessions both hitting the top of the {5,8} band at 60 kg → 2×2 fires.
+    const workouts = [
+      wk(0, 'bench-press', [set(60, 8), set(60, 8)]),
+      wk(7, 'bench-press', [set(60, 8), set(60, 8)]),
+    ]
+    const head = topProgressHeadline(workouts)
+    expect(head?.tone).toBe('ready')
+    expect(head?.text).toContain('Bankdrücken')
+    expect(head?.text).toContain('kg')
+  })
+
+  it('topProgressHeadline returns null with no strength entries', () => {
+    expect(topProgressHeadline([])).toBeNull()
+  })
+
+  it('weeklyCardioMinutes buckets cardio duration into trailing weeks', () => {
+    const now = dayOffset(BASE, 0)
+    const workouts = [
+      makeWorkout(dayOffset(BASE, -7), { type: 'cardio', durationMin: 30 }),
+      makeWorkout(dayOffset(BASE, 0), { type: 'cardio', durationMin: 45 }),
+      makeWorkout(dayOffset(BASE, 0), { type: 'strength', durationMin: 60 }),
+    ]
+    const weekly = weeklyCardioMinutes(workouts, now, 2)
+    expect(weekly.length).toBe(2)
+    expect(weekly[0].value).toBe(30) // last week
+    expect(weekly[1].value).toBe(45) // this week (strength excluded)
   })
 })

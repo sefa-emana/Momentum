@@ -1,10 +1,11 @@
 import { TAB_ICON, ICON_STROKE } from '../ui/icons'
 
-export type Tab = 'home' | 'history' | 'achievements' | 'profile'
+export type Tab = 'home' | 'history' | 'progress' | 'achievements' | 'profile'
 
 const ITEMS: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Home' },
   { id: 'history', label: 'Verlauf' },
+  { id: 'progress', label: 'Fortschritt' },
   { id: 'achievements', label: 'Erfolge' },
   { id: 'profile', label: 'Profil' },
 ]
