@@ -30,7 +30,7 @@ export function MiniBarChart({ data }: { data: DaySeriesPoint[] }) {
               width={barW}
               height={Math.max(h, d.xp > 0 ? 2 : 0.6)}
               rx={1.2}
-              fill={d.xp > 0 ? 'url(#bar-grad)' : '#232b47'}
+              fill={d.xp > 0 ? 'url(#bar-grad)' : 'var(--surface-3)'}
             />
           )
         })}

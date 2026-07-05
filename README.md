@@ -12,20 +12,33 @@ lässt.
 ## Features
 
 - **Training loggen** — Art (Kraft, Cardio, Mobility, Sport, Sonstiges),
-  Intensität und Dauer. Auch 5 Minuten zählen.
-- **XP & Level** — effort-basierte XP mit einer früh belohnenden,
-  später fordernden Level-Kurve.
-- **Momentum** — kontinuierliche 0–100-Skala. Ein Ruhetag schadet nie; längere
-  Pausen kühlen dein Momentum langsam ab (Floor bei 15). Rückkehr nach einer
-  Pause gibt einen Comeback-Boost.
-- **Streaks** nach der „Never miss twice"-Regel — ein einzelner Pausentag bricht
-  die Streak nicht.
-- **Wochenziele** — selbst gesetzt, mit Live-Fortschritt und Bonus beim
-  Erreichen.
-- **Erfolge** — an echte Meilensteine gekoppelt, mit Bonus-XP.
-- **PWA** — installierbar, offline-fähig, mobile-first.
-- **Lokal & privat** — alle Daten liegen im Browser (localStorage). Backup-Export
-  und Import inklusive.
+  Intensität und Dauer. Auch 5 Minuten zählen. Optional: Session-RPE-Tap
+  („Wie hart war's wirklich?"), PR-Marker und Stimmungs-Tap.
+- **Progression Engine** — Trainingslast nach Fosters validiertem
+  sRPE-Modell (Intensität × Dauer). XP belohnen echten Fortschritt relativ
+  zur eigenen Baseline („schlag deine letzte Woche"), nie Overreaching:
+  Bei steilen Lastsprüngen pausieren Boni und ein sanfter Hinweis erscheint.
+- **XP & Level** — Anwesenheits-Floor + Effort + Fortschritts-/PR-Boni,
+  früh belohnende, später fordernde Level-Kurve.
+- **Momentum** — kontinuierliche 0–100-Skala mit Vergebungs-Layer:
+  Rest Shields fangen verpasste Tage ab, „Life happened"-Pausen frieren
+  alles ein, Comebacks stellen verlorenes Momentum teilweise wieder her.
+- **Streaks** nach der „Never miss twice"-Regel, pausenfest.
+- **Wochenziele** — selbst gesetzt, mit adaptivem Vorschlag aus der eigenen
+  Historie und WHO-Aktivitätspunkten (150/Woche + 2× Kraft) als
+  Gesundheitsanker.
+- **Endgame** — Mastery-Tracks pro Trainingsart, rotierende Opt-in-Quests
+  (verschwinden still statt zu „scheitern"), gestufte Erfolge,
+  deterministische Überraschungs-Boni (immer additiv).
+- **Konsistenz-Heatmap** — GitHub-Style, relativ zur eigenen Bestmarke.
+- **Design** — Liquid-Glass-Chrome (iOS-26-Stil, Safari-kompatibel) mit
+  solidem Content-Layer, Dark & Clean-Light aus einem Token-Set,
+  Lucide-Icons, Space-Grotesk-Zahlen, reduzierte-Bewegung-Fallbacks.
+- **PWA** — installierbar, offline-fähig, App-Badge-Erinnerung,
+  Manifest-Shortcut, Share-Cards (on-device gerendert).
+- **Lokal & privat** — alle Daten im Browser: IndexedDB als Quelle der
+  Wahrheit, localStorage als Spiegel, `storage.persist()` plus
+  Backup-Export/-Import mit Frische-Hinweis. Kein Backend, keine Accounts.
 
 Die psychologische Fundierung ist in [`docs/PSYCHOLOGY.md`](docs/PSYCHOLOGY.md)
 dokumentiert.

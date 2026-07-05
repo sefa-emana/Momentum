@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   applyDecay,
   computeMomentum,
+  computeMomentumDetail,
+  computeShields,
   decayAmount,
   momentumGainFor,
   momentumTier,
@@ -98,12 +100,24 @@ describe('computeMomentum', () => {
     expect(threeSessions).toBe(oneSession)
   })
 
-  it('decays after a period of inactivity', () => {
+  it('decays after a long lapse once shields are exhausted', () => {
+    // Rest Shields (2 per run) each absorb one decay day beyond the grace day,
+    // so a *short* lapse no longer decays. To observe decay we need a lapse
+    // long enough to exhaust both shields: day 4 → day 12 = 8 inactive days =
+    // 1 grace + 2 shield-absorbed + 5 that actually decay.
     const built = [0, 1, 2, 3, 4].map((d) => makeWorkout(dayOffset(BASE, d)))
     const atPeak = computeMomentum(built, dayOffset(BASE, 4))
-    const afterRest = computeMomentum(built, dayOffset(BASE, 8))
-    expect(afterRest).toBeLessThan(atPeak)
-    expect(afterRest).toBeGreaterThanOrEqual(MOMENTUM_FLOOR)
+    const afterLongLapse = computeMomentum(built, dayOffset(BASE, 12))
+    expect(afterLongLapse).toBeLessThan(atPeak)
+    expect(afterLongLapse).toBeGreaterThanOrEqual(MOMENTUM_FLOOR)
+  })
+
+  it('Rest Shields absorb a short lapse so momentum holds', () => {
+    // day 4 → day 8 = 3 inactive days = 1 grace + 2 shield-absorbed → 0 decay,
+    // even though the same gap decayed before the forgiveness layer existed.
+    const built = [0, 1, 2, 3, 4].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const atPeak = computeMomentum(built, dayOffset(BASE, 4))
+    expect(computeMomentum(built, dayOffset(BASE, 8))).toBe(atPeak)
   })
 
   it('never decays below the floor no matter how long the lapse', () => {
@@ -120,33 +134,127 @@ describe('computeMomentum', () => {
     )
   })
 
-  it('rewards a comeback more than a normal session', () => {
-    // Normal: two consecutive days.
-    const normal = computeMomentum(
-      [makeWorkout(dayOffset(BASE, 0)), makeWorkout(dayOffset(BASE, 1))],
-      dayOffset(BASE, 1),
-    )
-    // Comeback: a session, a long gap, then a session.
+  it('rewards a comeback that recovers real lost momentum', () => {
+    // Build high momentum (days 0–6, ~100), then a long lapse that exhausts
+    // both shields and decays all the way to the floor, then return. Earn-back
+    // hands back part of what the lapse cost, so the comeback lands well above
+    // both the floor and a plain +15 gain.
+    const built = [0, 1, 2, 3, 4, 5, 6].map((d) => makeWorkout(dayOffset(BASE, d)))
     const comeback = computeMomentum(
+      [...built, makeWorkout(dayOffset(BASE, 24))],
+      dayOffset(BASE, 24),
+    )
+    // Normal single-gain from the floor would be 30 (15 floor + 15). Earn-back
+    // after a large real loss exceeds that (up to the +40 cap → 55).
+    expect(comeback).toBeGreaterThan(30)
+  })
+})
+
+describe('earn-back comebacks (Rest-Shield interaction)', () => {
+  it('a comeback from the floor with no real loss grants only the base gain', () => {
+    // A single early session sits at the floor already; a later gap decays
+    // nothing real (floored), so there is nothing to "earn back" → +15 only.
+    const m = computeMomentum(
       [makeWorkout(dayOffset(BASE, 0)), makeWorkout(dayOffset(BASE, 6))],
       dayOffset(BASE, 6),
     )
-    // Comeback boost (25) exceeds the normal gain (15) from the same floor.
-    expect(comeback).toBeGreaterThan(normal)
+    expect(m).toBe(MOMENTUM_FLOOR + 15) // 30
+  })
+
+  it('scales the comeback gain with the momentum actually lost', () => {
+    // Bigger prior momentum → bigger real decay in the lapse → bigger earn-back.
+    const small = computeMomentum(
+      [
+        ...[0, 1, 2].map((d) => makeWorkout(dayOffset(BASE, d))),
+        makeWorkout(dayOffset(BASE, 20)),
+      ],
+      dayOffset(BASE, 20),
+    )
+    const large = computeMomentum(
+      [
+        ...[0, 1, 2, 3, 4, 5, 6].map((d) => makeWorkout(dayOffset(BASE, d))),
+        makeWorkout(dayOffset(BASE, 20)),
+      ],
+      dayOffset(BASE, 20),
+    )
+    expect(large).toBeGreaterThanOrEqual(small)
+  })
+})
+
+describe('computeShields', () => {
+  it('starts a fresh run with the full shield bank', () => {
+    expect(computeShields([makeWorkout(BASE)], BASE).remaining).toBe(2)
+  })
+
+  it('consumes shields to absorb decay days beyond the grace day', () => {
+    // day 0 → day 5 = 4 inactive days = 1 grace + 2 shields + 1 real decay day.
+    const s = computeShields(
+      [makeWorkout(dayOffset(BASE, 0))],
+      dayOffset(BASE, 5),
+    )
+    expect(s.remaining).toBe(0)
+    expect(s.usedTotal).toBe(2)
+  })
+
+  it('regenerates one shield per four active days after being spent', () => {
+    // Spend both shields on a lapse, then train four straight days to bank one
+    // back. Fresh-run resets aside, we assert a used-but-recovering bank.
+    const workouts = [
+      makeWorkout(dayOffset(BASE, 0)),
+      // long enough gap to spend shields but not bottom out into a new run
+      makeWorkout(dayOffset(BASE, 3)),
+      makeWorkout(dayOffset(BASE, 4)),
+      makeWorkout(dayOffset(BASE, 5)),
+      makeWorkout(dayOffset(BASE, 6)),
+    ]
+    const s = computeShields(workouts, dayOffset(BASE, 6))
+    expect(s.remaining).toBeGreaterThanOrEqual(0)
+    expect(s.remaining).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('pauses ("Life happened")', () => {
+  it('freezes decay for paused days', () => {
+    const built = [0, 1, 2, 3, 4].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const atPeak = computeMomentum(built, dayOffset(BASE, 4))
+    // A 10-day pause covering days 5–14 means the long lapse to day 15 costs
+    // nothing: paused days are neither active nor inactive.
+    const pauses = [{ from: dayOffset(BASE, 5), to: dayOffset(BASE, 14) }]
+    const frozen = computeMomentumDetail(built, pauses, dayOffset(BASE, 15)).momentum
+    // Without the pause the same lapse would exhaust shields and decay hard.
+    const unfrozen = computeMomentum(built, dayOffset(BASE, 15))
+    expect(frozen).toBe(atPeak)
+    expect(frozen).toBeGreaterThan(unfrozen)
+  })
+
+  it('does not spend shields on paused days', () => {
+    const built = [0, 1, 2, 3, 4].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const pauses = [{ from: dayOffset(BASE, 5), to: dayOffset(BASE, 14) }]
+    const detail = computeMomentumDetail(built, pauses, dayOffset(BASE, 15))
+    expect(detail.shieldsRemaining).toBe(2)
+    expect(detail.shieldsUsedTotal).toBe(0)
   })
 })
 
 describe('momentumGainFor', () => {
-  it('returns the base gain for a fresh start', () => {
-    expect(momentumGainFor(null, BASE)).toBe(15)
-  })
-
-  it('returns the comeback gain after a lapse', () => {
-    expect(momentumGainFor(dayOffset(BASE, 0), dayOffset(BASE, 5))).toBe(25)
+  it('returns the base gain for a fresh start (empty history)', () => {
+    expect(momentumGainFor([], BASE)).toBe(15)
   })
 
   it('returns the base gain for a short gap', () => {
-    expect(momentumGainFor(dayOffset(BASE, 0), dayOffset(BASE, 1))).toBe(15)
+    const gain = momentumGainFor(
+      [makeWorkout(dayOffset(BASE, 0))],
+      dayOffset(BASE, 1),
+    )
+    expect(gain).toBe(15)
+  })
+
+  it('returns an earned-back comeback gain after a real lapse', () => {
+    // Build real momentum, exhaust shields with a long lapse → earn-back > 15.
+    const built = [0, 1, 2, 3, 4, 5, 6].map((d) => makeWorkout(dayOffset(BASE, d)))
+    const gain = momentumGainFor(built, dayOffset(BASE, 24))
+    expect(gain).toBeGreaterThan(15)
+    expect(gain).toBeLessThanOrEqual(40)
   })
 })
 

@@ -26,6 +26,30 @@ export interface Workout {
   note?: string
   /** XP awarded for this workout at the time it was logged. */
   xpEarned: number
+  /** Optional post-session RPE ("Wie hart war's wirklich?"): a 4-option tap
+   *  (locker 3 / solide 5 / hart 7 / alles 9) that sharpens the session load
+   *  beyond the intensity default. */
+  feel?: number
+  /** User marked "heute eine Übung/Bestzeit gesteigert" — the honest bridge to
+   *  mechanical overload without an exercise database. */
+  prBeaten?: boolean
+  /** Optional mood tap before the session (1–5). */
+  moodBefore?: 1 | 2 | 3 | 4 | 5
+  /** Optional mood tap after the session (1–5). Affective response predicts
+   *  adherence 6–12 months out (PMC2390920). */
+  moodAfter?: 1 | 2 | 3 | 4 | 5
+}
+
+/**
+ * A "Life happened" pause (Gentler Streak): a manual switch for illness/travel.
+ * Days inside a pause count as neither active nor inactive — decay and streak
+ * freeze without guilt. `to === null` means the pause is still active.
+ */
+export interface Pause {
+  /** ISO date the pause began. */
+  from: string
+  /** ISO date the pause ended, or null while still active. */
+  to: string | null
 }
 
 export type MomentumTier = 'cold' | 'warm' | 'hot' | 'blazing'
@@ -46,6 +70,24 @@ export interface UnlockedAchievement {
   unlockedAt: string
 }
 
+/**
+ * A weekly quest the user has opted into. `week` is the ISO-week key the quest
+ * belongs to; `acceptedAt` is the acceptance timestamp — a workout only counts
+ * toward completion if it is logged at/after this moment, which keeps live and
+ * replayed state identical (both compare persisted facts only).
+ */
+export interface AcceptedQuest {
+  id: string
+  week: string
+  acceptedAt: string
+}
+
+/** A completed quest, tracked once per (week, id) so its bonus is granted once. */
+export interface QuestRef {
+  id: string
+  week: string
+}
+
 export interface WeeklyGoal {
   /** Target number of workouts per ISO week. */
   workoutsPerWeek: number
@@ -56,6 +98,9 @@ export interface Settings {
   /** User-facing display name. */
   name: string
   reducedMotion: boolean
+  /** ISO timestamp of the last data export ("Backup"). Undefined = never.
+   *  Drives the gentle backup-freshness nudge (data lives only on this device). */
+  lastBackupAt?: string
 }
 
 export interface AppState {
@@ -68,6 +113,17 @@ export interface AppState {
   /** ISO-week keys for which the weekly-goal bonus has already been granted,
    *  so it is awarded at most once per week. */
   goalMetWeeks: string[]
+  /** ISO-week keys for which the weekly progress bonus (beating last week's
+   *  load) has already been granted — same once-per-week guarantee. */
+  progressWeeks: string[]
+  /** "Life happened" pauses that freeze decay and streaks. */
+  pauses: Pause[]
+  /** Weekly quests the user has opted into (raw user input, passed through
+   *  replay like settings/pauses). */
+  acceptedQuests: AcceptedQuest[]
+  /** Completed quests — derived accumulator, re-derived by rebuildFromWorkouts
+   *  exactly like `progressWeeks`, so each quest bonus is granted at most once. */
+  questsDone: QuestRef[]
   unlocked: UnlockedAchievement[]
   settings: Settings
   /** True once the user has finished onboarding. */

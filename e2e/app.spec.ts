@@ -36,7 +36,7 @@ test.describe('Logging workouts', () => {
 
     // Dashboard now reflects one workout.
     await expect(page.getByText('Einheiten gesamt')).toBeVisible()
-    await expect(page.getByText('💪 1')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('1')
   })
 
   test('accumulates total XP after a session', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Logging workouts', () => {
 
     // Back on the dashboard the count is reset to zero.
     await page.getByRole('button', { name: 'Home' }).click()
-    await expect(page.getByText('💪 0')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('0')
   })
 })
 
@@ -89,7 +89,7 @@ test.describe('Momentum & streak', () => {
   test('streak shows 1 after the first workout', async ({ page }) => {
     await onboard(page)
     await logWorkout(page)
-    await expect(page.getByText('🔥 1')).toBeVisible()
+    await expect(page.getByTestId('stat-streak')).toContainText('1')
   })
 })
 
@@ -109,7 +109,22 @@ test.describe('Persistence', () => {
 
     await page.reload()
 
-    await expect(page.getByText('💪 2')).toBeVisible()
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
+  })
+
+  test('survives a localStorage wipe — IndexedDB is authoritative', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+    await logWorkout(page)
+
+    // Wipe only the secondary localStorage snapshot; the durable IndexedDB copy
+    // must still rehydrate the full state on reload (the whole point of Wave 4).
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+
+    await expect(page.getByTestId('stat-total-workouts')).toContainText('2')
+    // And onboarding must NOT reappear (state truly restored from IndexedDB).
+    await expect(page.getByTestId('stat-total-workouts')).toBeVisible()
   })
 })
 
@@ -147,6 +162,66 @@ test.describe('Profile', () => {
   })
 })
 
+test.describe('Wave 2 — mechanics in the UI', () => {
+  test('renders the consistency heatmap in history', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page)
+
+    await page.getByRole('button', { name: 'Verlauf' }).click()
+    await expect(page.getByRole('heading', { name: 'Verlauf' })).toBeVisible()
+    await expect(page.getByTestId('heatmap')).toBeVisible()
+  })
+
+  test('"Mehr (optional)" reveals a selectable feel chip', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Training loggen' }).first().click()
+    await expect(page.getByRole('dialog', { name: 'Training loggen' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Mehr (optional)' }).click()
+    const solide = page.getByRole('button', { name: 'Solide' })
+    await expect(solide).toBeVisible()
+    await solide.click()
+    await expect(solide).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('starting and ending a "Life happened" pause round-trips', async ({ page }) => {
+    await onboard(page)
+    await page.getByRole('button', { name: 'Profil' }).click()
+
+    await page.getByRole('button', { name: 'Pause starten' }).click()
+    await expect(page.getByRole('button', { name: 'Pause beenden' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Pause beenden' }).click()
+    await expect(page.getByRole('button', { name: 'Pause starten' })).toBeVisible()
+  })
+})
+
+test.describe('Wave 3 — endgame', () => {
+  test('mastery section renders after logging a workout', async ({ page }) => {
+    await onboard(page)
+    await logWorkout(page) // default type: strength → "Kraft"
+
+    await page.getByRole('button', { name: 'Erfolge' }).click()
+    await expect(page.getByRole('heading', { name: 'Erfolge' })).toBeVisible()
+    await expect(page.getByText('Meisterschaft', { exact: true })).toBeVisible()
+    await expect(page.getByText('Kraft', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Level 1/).first()).toBeVisible()
+  })
+
+  test('a weekly quest can be accepted and shows live progress', async ({ page }) => {
+    await onboard(page)
+
+    await page.getByRole('button', { name: 'Erfolge' }).click()
+    await expect(page.getByText('Quests der Woche')).toBeVisible()
+
+    const accept = page.getByRole('button', { name: 'Annehmen' }).first()
+    await expect(accept).toBeVisible()
+    await accept.click()
+
+    await expect(page.getByText('Angenommen').first()).toBeVisible()
+  })
+})
+
 test('has PWA manifest and service worker registration', async ({ page }) => {
   await page.goto(APP_URL)
   const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href')
@@ -156,4 +231,6 @@ test('has PWA manifest and service worker registration', async ({ page }) => {
   const manifest = await res.json()
   expect(manifest.name).toContain('Momentum')
   expect(manifest.icons.length).toBeGreaterThan(0)
+  // Wave 4: "Training loggen" app shortcut deep-links into the log sheet.
+  expect(manifest.shortcuts?.[0]?.url).toContain('action=log')
 })

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { levelFromXp, totalXpToReachLevel, xpForWorkout } from './xp'
+import {
+  levelFromXp,
+  stableHash,
+  surpriseBonusFor,
+  totalXpToReachLevel,
+  xpForWorkout,
+} from './xp'
 import { XP_BASE } from './constants'
 
 describe('xpForWorkout', () => {
@@ -67,6 +73,31 @@ describe('level curve', () => {
     for (let l = 1; l < 50; l++) {
       expect(totalXpToReachLevel(l + 1)).toBeGreaterThan(totalXpToReachLevel(l))
     }
+  })
+})
+
+describe('stableHash / surpriseBonusFor', () => {
+  it('is deterministic for the same id', () => {
+    expect(stableHash('abc')).toBe(stableHash('abc'))
+    expect(surpriseBonusFor('workout-42')).toBe(surpriseBonusFor('workout-42'))
+  })
+
+  it('produces an unsigned 32-bit integer', () => {
+    for (const s of ['', 'a', 'workout-1', 'zzz-999']) {
+      const h = stableHash(s)
+      expect(Number.isInteger(h)).toBe(true)
+      expect(h).toBeGreaterThanOrEqual(0)
+      expect(h).toBeLessThanOrEqual(0xffffffff)
+    }
+  })
+
+  it('fires for roughly 1 in 8 ids and never uses randomness', () => {
+    let hits = 0
+    const N = 4000
+    for (let i = 0; i < N; i++) if (surpriseBonusFor(`w-${i}`)) hits += 1
+    const rate = hits / N
+    expect(rate).toBeGreaterThan(0.06)
+    expect(rate).toBeLessThan(0.19)
   })
 })
 
